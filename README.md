@@ -78,13 +78,19 @@ The script waits automatically, and you can stop and re-run it at any time.
 
 ### 5. Deploy to Vercel
 
-1. Push this repo to GitHub, then **Import** it at [vercel.com/new](https://vercel.com/new).
-2. Add every variable from `.env.local` under **Settings → Environment Variables**.
-3. Deploy. In the Strava API settings, change **Authorization Callback Domain** to your Vercel domain
-   (e.g. `my-training.vercel.app`).
-4. Register the webhook so new activities appear automatically:
+Live at **https://training-dashboard-bay.vercel.app** (Vercel project `training-dashboard`, Stockholm region).
+
+**Deploys are automatic:** every push to `main` on GitHub deploys to production; pushes to other
+branches get a preview URL. Commits must be authored with the email on your Vercel account
+(this repo uses `simen.stolsnes@gmail.com`), or Vercel blocks the deploy.
+
+Set up once, already done for this project:
+
+1. Add every variable from `.env.local` under **Settings → Environment Variables**.
+2. In the Strava API settings, set **Authorization Callback Domain** to the Vercel domain.
+3. Register the webhook so new activities appear automatically:
    ```bash
-   npm run webhook -- https://my-training.vercel.app
+   npm run webhook -- https://training-dashboard-bay.vercel.app
    npm run webhook -- --list      # check it
    ```
 
