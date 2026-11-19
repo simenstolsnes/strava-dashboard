@@ -3,6 +3,9 @@
  *
  *   npm run backfill            # last 24 months
  *   npm run backfill -- --months=60
+ *   npm run backfill -- --refresh   # also refetch detail + streams for activities
+ *                                   # computed with an older METRICS_VERSION
+ *                                   # (fills calories, maps, laps, HRRc)
  *
  * Safe to stop and re-run at any time: it resumes where it left off. Waits
  * automatically when Strava's 15-minute rate limit is reached.
@@ -10,10 +13,11 @@
 process.loadEnvFile(".env.local");
 
 import { strava } from "../src/lib/strava";
-import { upsertSummaries, processPending, refreshAthlete } from "../src/lib/sync";
+import { upsertSummaries, processPending, refreshAthlete, METRICS_VERSION } from "../src/lib/sync";
 import { db } from "../src/lib/db";
 
 const months = Number(process.argv.find((a) => a.startsWith("--months="))?.split("=")[1] ?? 24);
+const refresh = process.argv.includes("--refresh");
 const athleteId = Number(process.env.OWNER_ATHLETE_ID);
 const sleep = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 
@@ -38,12 +42,18 @@ async function main() {
   }
   console.log();
 
-  const countPending = async () =>
-    (await db().from("activities").select("id", { count: "exact", head: true }).eq("processed", false)).count ?? 0;
+  const countPending = async () => {
+    const q = db().from("activities").select("id", { count: "exact", head: true });
+    const r = refresh
+      ? await q.or(`processed.eq.false,metrics_version.lt.${METRICS_VERSION},metrics_version.is.null`)
+      : await q.eq("processed", false);
+    return r.count ?? 0;
+  };
 
   console.log(`Fetching streams and computing metrics (${await countPending()} to go)…`);
   for (;;) {
-    const res = await processPending(athleteId, 25, false);
+    // Refresh fetches full detail too (calories, map, laps): two requests per activity
+    const res = await processPending(athleteId, 25, refresh, refresh ? "outdated" : "unprocessed");
     const left = await countPending();
     // Use the counters reported by the module that made the requests
     const rl = res.rateLimit;

@@ -16,7 +16,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
 
 // ---------- shared chrome ----------
 
@@ -142,31 +143,46 @@ export function FormChart({ data }: { data: { date: string; form: number }[] }) 
   );
 }
 
-// ---------- Stacked hours by sport ----------
+// ---------- Stacked totals by sport ----------
 
-const SPORT_SERIES: Series[] = [
-  { key: "ride", label: "Ride", color: "var(--s-ride)", format: (v) => `${v.toFixed(1)} h` },
-  { key: "run", label: "Run", color: "var(--s-run)", format: (v) => `${v.toFixed(1)} h` },
-  { key: "strength", label: "Strength & HIIT", color: "var(--s-strength)", format: (v) => `${v.toFixed(1)} h` },
-  { key: "other", label: "Other", color: "var(--s-other)", format: (v) => `${v.toFixed(1)} h` },
+const sportSeries = (fmt: (v: number) => string): Series[] => [
+  { key: "ride", label: "Ride", color: "var(--s-ride)", format: fmt },
+  { key: "run", label: "Run", color: "var(--s-run)", format: fmt },
+  { key: "strength", label: "Strength & HIIT", color: "var(--s-strength)", format: fmt },
+  { key: "other", label: "Other", color: "var(--s-other)", format: fmt },
 ];
 
-export function SportHoursChart({ data, by }: { data: Array<Record<string, number | string>>; by: "week" | "month" }) {
-  const xKey = by;
+const kcalFmt = (v: number) => `${Math.round(v).toLocaleString("en-GB")} kcal`;
+
+export function SportHoursChart({
+  data,
+  by,
+  unit = "h",
+}: {
+  data: Array<Record<string, number | string>>;
+  by: "week" | "month";
+  unit?: "h" | "kcal";
+}) {
+  const series = sportSeries(unit === "h" ? (v) => `${v.toFixed(1)} h` : kcalFmt);
   const fmt = by === "week" ? dayLabel : monthLabel;
   return (
     <>
-      <Legend series={SPORT_SERIES} shape="rect" />
+      <Legend series={series} shape="rect" />
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="25%">
           {GRID}
-          <XAxis dataKey={xKey} {...AXIS} tickFormatter={fmt} minTickGap={8} />
-          <YAxis {...AXIS} axisLine={false} width={32} tickFormatter={(v) => `${v}h`} />
+          <XAxis dataKey={by} {...AXIS} tickFormatter={fmt} minTickGap={8} />
+          <YAxis
+            {...AXIS}
+            axisLine={false}
+            width={unit === "h" ? 32 : 40}
+            tickFormatter={(v) => (unit === "h" ? `${v}h` : compact(v))}
+          />
           <Tooltip
             cursor={{ fill: "var(--rock)" }}
-            content={makeTip(SPORT_SERIES, (l) => (by === "week" ? `Week of ${dayLabel(l)}` : monthLabel(l)))}
+            content={makeTip(series, (l) => (by === "week" ? `Week of ${dayLabel(l)}` : monthLabel(l)))}
           />
-          {SPORT_SERIES.map((s) => (
+          {series.map((s) => (
             <Bar key={s.key} dataKey={s.key} stackId="h" fill={s.color} stroke="var(--plate)" strokeWidth={2} maxBarSize={24} isAnimationActive={false} />
           ))}
         </BarChart>
@@ -179,13 +195,50 @@ export function SportHoursChart({ data, by }: { data: Array<Record<string, numbe
 
 const curveLabel = (s: number) => (s < 60 ? `${s}s` : s < 3600 ? `${s / 60}m` : `${s / 3600}h`);
 
-export function PowerCurveChart({
-  data,
-  weight,
-}: {
-  data: { seconds: number; last90: number | null; prev90: number | null; allTime: number | null }[];
-  weight: number | null;
-}) {
+export type Holder = { id: number; name: string; date: string } | null;
+
+/** Recharts reports the clicked category index on chart clicks. */
+const clickedIndex = (state: unknown): number | null => {
+  const st = state as { activeIndex?: unknown; activeTooltipIndex?: unknown } | null;
+  const i = Number(st?.activeIndex ?? st?.activeTooltipIndex);
+  return Number.isInteger(i) && i >= 0 ? i : null;
+};
+
+/** Which activities set the selected best efforts, each linking to the activity. */
+function EffortPanel({ title, rows }: { title: string; rows: { series: Series; value: number | null; holder: Holder }[] }) {
+  const shown = rows.filter((r) => r.value != null && r.holder);
+  return (
+    <div className="mt-3 rounded-md border border-line bg-rock/40 p-3" aria-live="polite">
+      <p className="label">{title}</p>
+      {shown.length ? (
+        <ul className="mt-2 space-y-2">
+          {shown.map((r) => (
+            <li key={r.series.key} className="flex items-center gap-2.5 text-sm">
+              {lineKey(r.series, 14)}
+              <span className="num w-[4.5rem] shrink-0 font-bold text-ink">{r.series.format!(r.value!).split(" · ")[0]}</span>
+              <Link href={`/activities/${r.holder!.id}`} className="min-w-0 flex-1 truncate font-semibold text-teal hover:underline">
+                {r.holder!.name}
+              </Link>
+              <span className="shrink-0 text-xs text-ink-2">{dayLabel(r.holder!.date.slice(0, 10))}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-sm text-ink-2">No efforts for this point.</p>
+      )}
+    </div>
+  );
+}
+
+type CurveRow = {
+  seconds: number;
+  last90: number | null;
+  prev90: number | null;
+  allTime: number | null;
+  holders: { last90: Holder; prev90: Holder; allTime: Holder };
+};
+
+export function PowerCurveChart({ data, weight }: { data: CurveRow[]; weight: number | null }) {
   const w = (v: number) => (weight ? `${v} W · ${(v / weight).toFixed(2)} W/kg` : `${v} W`);
   const series: Series[] = [
     { key: "last90", label: "Last 90 days", color: "var(--s-ride)", format: w },
@@ -193,15 +246,27 @@ export function PowerCurveChart({
     { key: "allTime", label: "All synced", color: "var(--s-strength)", format: w },
   ];
   const rows = data.map((d) => ({ ...d, label: curveLabel(d.seconds) }));
+  const [sel, setSel] = useState(Math.max(0, rows.findIndex((r) => r.seconds === 1200)));
+  const row = rows[Math.min(sel, rows.length - 1)];
+  type K = "last90" | "prev90" | "allTime";
   return (
     <>
       <Legend series={series} />
       <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={rows} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <LineChart
+          data={rows}
+          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+          onClick={(st) => {
+            const i = clickedIndex(st);
+            if (i !== null) setSel(i);
+          }}
+          style={{ cursor: "pointer" }}
+        >
           {GRID}
           <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" minTickGap={4} />
           <YAxis {...AXIS} axisLine={false} width={40} tickFormatter={compact} />
-          <Tooltip cursor={CURSOR} content={makeTip(series, (l) => `Best ${l}`)} />
+          {row && <ReferenceLine x={row.label} stroke="var(--muted)" strokeDasharray="3 3" />}
+          <Tooltip cursor={CURSOR} content={makeTip(series, (l) => `Best ${l} · tap to see the rides`)} />
           {series.map((s) => (
             <Line
               key={s.key}
@@ -209,32 +274,61 @@ export function PowerCurveChart({
               stroke={s.color}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, stroke: "var(--plate)", strokeWidth: 2 }}
+              activeDot={{ r: 5, stroke: "var(--plate)", strokeWidth: 2 }}
               connectNulls
               isAnimationActive={false}
             />
           ))}
         </LineChart>
       </ResponsiveContainer>
+      {row && (
+        <EffortPanel
+          title={`Best ${row.label}: who set it`}
+          rows={series.map((s) => ({ series: s, value: row[s.key as K], holder: row.holders[s.key as K] }))}
+        />
+      )}
     </>
   );
 }
 
-export function MonthlyPowerChart({ data }: { data: { month: string; p1m: number | null; p5m: number | null; p20m: number | null }[] }) {
+type MonthRow = {
+  month: string;
+  p1m: number | null;
+  p5m: number | null;
+  p20m: number | null;
+  holders: { p1m: Holder; p5m: Holder; p20m: Holder };
+};
+
+export function MonthlyPowerChart({ data }: { data: MonthRow[] }) {
   const series: Series[] = [
     { key: "p1m", label: "1 min", color: "var(--s-ride)", format: (v) => `${v} W` },
     { key: "p5m", label: "5 min", color: "var(--s-strength)", format: (v) => `${v} W` },
     { key: "p20m", label: "20 min", color: "var(--ink-2)", format: (v) => `${v} W` },
   ];
+  const lastWithData = data.reduce((acc, r, i) => (r.p1m || r.p5m || r.p20m ? i : acc), data.length - 1);
+  const [sel, setSel] = useState(lastWithData);
+  const row = data[Math.min(sel, data.length - 1)];
+  type K = "p1m" | "p5m" | "p20m";
+  const monthName = (m: string) =>
+    new Date(`${m}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
   return (
     <>
       <Legend series={series} />
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+          onClick={(st) => {
+            const i = clickedIndex(st);
+            if (i !== null) setSel(i);
+          }}
+          style={{ cursor: "pointer" }}
+        >
           {GRID}
           <XAxis dataKey="month" {...AXIS} tickFormatter={monthLabel} />
           <YAxis {...AXIS} axisLine={false} width={40} tickFormatter={compact} />
-          <Tooltip cursor={CURSOR} content={makeTip(series, (l) => monthLabel(l))} />
+          {row && <ReferenceLine x={row.month} stroke="var(--muted)" strokeDasharray="3 3" />}
+          <Tooltip cursor={CURSOR} content={makeTip(series, (l) => `${monthLabel(l)} · tap to see the rides`)} />
           {series.map((s) => (
             <Line
               key={s.key}
@@ -242,12 +336,19 @@ export function MonthlyPowerChart({ data }: { data: { month: string; p1m: number
               stroke={s.color}
               strokeWidth={2}
               dot={{ r: 3, fill: s.color, stroke: "var(--plate)", strokeWidth: 2 }}
+              activeDot={{ r: 5, stroke: "var(--plate)", strokeWidth: 2 }}
               connectNulls
               isAnimationActive={false}
             />
           ))}
         </LineChart>
       </ResponsiveContainer>
+      {row && (
+        <EffortPanel
+          title={`Best efforts in ${monthName(row.month)}`}
+          rows={series.map((s) => ({ series: s, value: row[s.key as K], holder: row.holders[s.key as K] }))}
+        />
+      )}
     </>
   );
 }
@@ -261,11 +362,14 @@ export function TrendChart({
 }: {
   data: { date: string; name: string; value: number; trend: number }[];
   label: string;
-  kind: "pace" | "watts";
+  kind: "pace" | "watts" | "bpm";
 }) {
-  const fmt = kind === "pace"
-    ? (v: number) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, "0")} /km`
-    : (v: number) => `${Math.round(v)} W`;
+  const fmt =
+    kind === "pace"
+      ? (v: number) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, "0")} /km`
+      : kind === "bpm"
+        ? (v: number) => `${Math.round(v)} bpm`
+        : (v: number) => `${Math.round(v)} W`;
   const series: Series[] = [
     { key: "value", label, color: "var(--s-ride)", format: fmt },
     { key: "trend", label: "6-week trend (estimate)", color: "var(--ink-2)", format: fmt, dashed: true },
@@ -276,11 +380,12 @@ export function TrendChart({
   const q = (p: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))] ?? 0;
   const pad = Math.max(1, (q(0.95) - q(0.05)) * 0.2);
   // Round outward to nice steps: 30 s for pace, 25 W for power (doubling until ≤ 6 ticks)
-  let step = kind === "pace" ? 30 : 25;
+  let step = kind === "pace" ? 30 : kind === "bpm" ? 5 : 25;
   const rawLo = q(0.05) - pad;
   const rawHi = q(0.95) + pad;
   while ((rawHi - rawLo) / step > 5) step *= 2;
-  const lo = Math.floor(rawLo / step) * step;
+  // Heart-rate drops cannot be negative; keep that axis at 0 or above
+  const lo = Math.max(kind === "bpm" ? 0 : -Infinity, Math.floor(rawLo / step) * step);
   const hi = Math.ceil(rawHi / step) * step;
   const ticks = Array.from({ length: Math.round((hi - lo) / step) + 1 }, (_, i) => lo + i * step);
   // Off-scale sessions sit just inside the edge so their marker renders whole
@@ -314,7 +419,7 @@ export function TrendChart({
             domain={[lo, hi]}
             ticks={ticks}
             allowDataOverflow
-            tickFormatter={(v) => fmt(v).replace(" /km", "")}
+            tickFormatter={(v) => fmt(v).replace(" /km", "").replace(" bpm", "")}
           />
           <Tooltip cursor={CURSOR} content={makeTip(series, (_, row) => `${row?.name ?? ""} · ${dayLabel(String(row?.date))}`)} />
           <Scatter

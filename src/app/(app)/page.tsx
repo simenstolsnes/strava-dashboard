@@ -126,13 +126,30 @@ export default async function TodayPage() {
 
         {/* Detail: trends and history */}
         <div className="space-y-4">
-          <Card title="Fitness and fatigue" subtitle="Estimated from Relative Effort (TSS when there’s no heart rate). Dashed = projection.">
+          <Card
+            title="Fitness and fatigue"
+            subtitle="Estimated from Relative Effort (TSS when there’s no heart rate). Dashed = projection."
+            info={
+              <>
+                <p>
+                  <strong className="text-ink">Fitness</strong> is your average daily training load over the last 6 weeks
+                  (42 days); <strong className="text-ink">fatigue</strong> the same over the last 7 days. Each session’s load
+                  is Strava’s Relative Effort, or TSS for rides without heart rate.
+                </p>
+                <p className="mt-2">
+                  <strong className="text-ink">Form</strong> = fitness − fatigue. Negative means you are building (and
+                  tired); positive means you are fresh. The dashed lines show where both go if you rest for 7 days.
+                </p>
+                <p className="mt-2">Same model as Strava’s Fitness &amp; Freshness, calculated here, so values differ a little.</p>
+              </>
+            }
+          >
             <FitnessChart data={o.chart} />
           </Card>
 
           <Card
             title="Weekly hours"
-            subtitle={`This week ${km(o.thisWeek.distance, 0)} in ${o.thisWeek.count} sessions · load ${Math.round(o.thisWeek.load)}`}
+            subtitle={`This week ${km(o.thisWeek.distance, 0)} in ${o.thisWeek.count} sessions · ${Math.round(o.thisWeek.kcal).toLocaleString("en-GB")} kcal (avg ${Math.round(o.avg4.kcal).toLocaleString("en-GB")}) · load ${Math.round(o.thisWeek.load)}`}
           >
             <SportHoursChart data={o.weekly} by="week" />
           </Card>

@@ -6,6 +6,10 @@ import { ActivityCurveChart, StreamChart } from "@/components/charts";
 import { duration, km, kmh, longDate, pace } from "@/lib/format";
 import { CURVE_DURATIONS } from "@/lib/metrics";
 import { reprocess, saveNote } from "./actions";
+import { RouteMapLazy } from "@/components/route-map-lazy";
+
+// Leaflet draws with SVG attributes, which cannot read CSS variables
+const ROUTE_COLOR = { ride: "#008c83", run: "#a54f16", strength: "#6a5acd", other: "#b8860b" } as const;
 
 export const metadata = { title: "Activity" };
 
@@ -62,17 +66,87 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
           {a.distance > 0 && (isRun ? <Stat label="Pace" value={pace(a.average_speed).replace(" /km", "")} unit="/km" /> : <Stat label="Speed" value={kmh(a.average_speed).replace(" km/h", "")} unit="km/h" />)}
           {a.total_elevation_gain > 0 && <Stat label="Elevation" value={Math.round(a.total_elevation_gain)} unit="m" />}
           {a.average_heartrate && <Stat label="Avg HR" value={Math.round(a.average_heartrate)} unit="bpm" hint={a.max_heartrate ? `max ${Math.round(a.max_heartrate)}` : undefined} />}
-          {a.suffer_score != null && <Stat label="Rel. effort" value={Math.round(a.suffer_score)} />}
+          {a.suffer_score != null && (
+            <Stat
+              label="Rel. effort"
+              value={Math.round(a.suffer_score)}
+              info="Strava’s Relative Effort: how hard the session was for your heart, from time spent in each heart-rate zone (higher zones count much more). It is the load behind your fitness and fatigue numbers."
+            />
+          )}
           {hasPower && <Stat label="Avg power" value={Math.round(a.average_watts ?? 0)} unit="W" hint={extra.max_watts ? `max ${Math.round(extra.max_watts)}` : undefined} />}
-          {hasPower && <Stat label="Normalized" value={Math.round(metrics!.normalized_power!)} unit="W" />}
-          {intensity && <Stat label="Intensity" value={intensity.toFixed(2)} hint={`FTP ${d.ftp} W`} />}
-          {d.tss != null && <Stat label="TSS" value={d.tss} />}
-          {extra.kilojoules && <Stat label="Work" value={Math.round(extra.kilojoules)} unit="kJ" />}
+          {hasPower && (
+            <Stat
+              label="Normalized"
+              value={Math.round(metrics!.normalized_power!)}
+              unit="W"
+              info="Normalized Power: the steady power that would have cost your body the same as this variable ride. Surges count more than easy spells, so for intervals it sits well above average power."
+            />
+          )}
+          {intensity && (
+            <Stat
+              label="Intensity"
+              value={intensity.toFixed(2)}
+              hint={`FTP ${d.ftp} W`}
+              info="Intensity Factor: Normalized Power divided by your FTP. Around 0.65 is easy endurance, 0.75–0.85 tempo, 0.95–1.05 a hard hour at threshold."
+            />
+          )}
+          {d.tss != null && (
+            <Stat
+              label="TSS"
+              value={d.tss}
+              info="Training Stress Score: load from duration and intensity. One hour at FTP = 100. Calculated with your current FTP, so it updates if your FTP changes."
+            />
+          )}
+          {extra.kilojoules && (
+            <Stat
+              label="Work"
+              value={Math.round(extra.kilojoules)}
+              unit="kJ"
+              info="Mechanical work you put into the pedals. Because muscles are about 24 % efficient, kJ of work is roughly the kcal you burned."
+            />
+          )}
           {extra.average_cadence && <Stat label="Cadence" value={Math.round(isRun ? extra.average_cadence * 2 : extra.average_cadence)} unit={isRun ? "spm" : "rpm"} />}
-          {extra.calories ? <Stat label="Calories" value={Math.round(extra.calories)} unit="kcal" /> : null}
-          {metrics?.decoupling != null && a.moving_time >= 1800 && <Stat label="Decoupling" value={`${metrics.decoupling.toFixed(1)}`} unit="%" hint="lower = steadier" />}
+          {extra.kcal && (
+            <Stat
+              label="Calories"
+              value={extra.kcal.kcal}
+              unit="kcal"
+              hint={extra.kcal.estimated ? "estimated from work" : undefined}
+              info={
+                extra.kcal.estimated
+                  ? "Strava had no calorie figure for this ride, so this uses the work you did: kJ of mechanical work ≈ kcal burned (about 24 % muscle efficiency cancels the 4.184 kJ/kcal conversion)."
+                  : hasPower
+                    ? "Strava’s estimate from the mechanical work you did with your power meter: the most accurate source available."
+                    : "Strava’s estimate from heart rate, your weight, age and sex (and speed for runs). Heart-rate based estimates can be off by 10–25 %."
+              }
+            />
+          )}
+          {metrics?.decoupling != null && a.moving_time >= 1800 && (
+            <Stat
+              label="Decoupling"
+              value={`${metrics.decoupling.toFixed(1)}`}
+              unit="%"
+              hint="lower = steadier"
+              info="How much your output per heartbeat dropped from the first to the second half. Under 5 % on a steady session means a solid aerobic base; intervals and hills make it meaningless."
+            />
+          )}
+          {metrics?.hrrc != null && (
+            <Stat
+              label="HRRc"
+              value={`−${metrics.hrrc}`}
+              unit="bpm"
+              hint={metrics.hrrc_from ? `in 60 s from ${metrics.hrrc_from}` : undefined}
+              info={`Heart-rate recovery: the largest drop in heart rate over 60 seconds, starting at or above your threshold (${d.threshold ?? "–"} bpm, bottom of Strava zone 4). A faster or bigger drop means better recovery.`}
+            />
+          )}
         </div>
       </Card>
+
+      {extra.mapPolyline && !a.trainer && !/Virtual/.test(a.sport_type) && (
+        <Card title="Route" subtitle="Teal dot = start, dark dot = finish. Pinch or use + / − to zoom.">
+          <RouteMapLazy polyline={extra.mapPolyline} color={ROUTE_COLOR[g]} />
+        </Card>
+      )}
 
       {rows.length > 0 && (
         <Card title="Streams" subtitle="Tap or hover to inspect; the charts share one cursor">

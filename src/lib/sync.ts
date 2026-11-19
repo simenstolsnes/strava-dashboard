@@ -7,10 +7,17 @@ import {
   zoneSeconds,
   efficiency,
   downsample,
+  heartRateRecovery,
   type Zone,
 } from "./metrics";
 
 type Context = { hrZones: Zone[] | null; powerZones: Zone[] | null };
+
+/** Bump when computeMetrics gains a metric; `npm run backfill -- --refresh` reprocesses older rows. */
+export const METRICS_VERSION = 2;
+
+/** Threshold heart rate: the bottom of Strava's zone 4 ("Threshold") in a 5-zone setup. */
+export const thresholdHr = (zones: Zone[] | null) => (zones && zones.length >= 4 ? zones[3].min : null);
 
 const isRun = (sport: string) => /Run|Walk|Hike/.test(sport);
 
@@ -41,6 +48,8 @@ function summaryRow(a: StravaActivity) {
     commute: a.commute ?? null,
     workout_type: a.workout_type ?? null,
     gear_id: a.gear_id ?? null,
+    // The list endpoint carries a simplified route; detail replaces it with the full one
+    ...(a.map?.summary_polyline ? { map_polyline: a.map.summary_polyline } : {}),
     updated_at: new Date().toISOString(),
   };
 }
@@ -50,6 +59,7 @@ function detailRow(a: StravaActivity) {
     ...summaryRow(a),
     description: a.description ?? null,
     calories: a.calories ?? null,
+    map_polyline: a.map?.polyline || a.map?.summary_polyline || null,
     detail_fetched: true,
     laps: (a.laps ?? []).map((l) => ({
       name: l.name,
@@ -107,8 +117,12 @@ function computeMetrics(sport: string, s: StreamSet, ctx: Context) {
 
   const effOutput = power1Hz ?? pace1Hz;
   const eff = effOutput && hr1Hz ? efficiency(effOutput, hr1Hz) : null;
+  const threshold = thresholdHr(ctx.hrZones);
+  const hrr = hr1Hz && threshold ? heartRateRecovery(hr1Hz, threshold) : null;
 
   return {
+    hrrc: hrr?.drop ?? null,
+    hrrc_from: hrr?.from ?? null,
     power_curve: power1Hz ? meanMax(power1Hz) : null,
     normalized_power: power1Hz ? normalizedPower(power1Hz) : null,
     power_zone_seconds: power1Hz && ctx.powerZones ? zoneSeconds(power1Hz, ctx.powerZones) : null,
@@ -174,7 +188,9 @@ export async function processActivity(
     );
     check(await db().from("activity_streams").upsert({ activity_id: activityId, data: chartStreams(streams) }));
   }
-  check(await db().from("activities").update({ processed: true }).eq("id", activityId));
+  check(
+    await db().from("activities").update({ processed: true, metrics_version: METRICS_VERSION }).eq("id", activityId),
+  );
 }
 
 export async function deleteActivity(activityId: number) {
@@ -205,16 +221,22 @@ export async function syncRecent(athleteId: number, maxProcess = 20) {
   return { fetched, ...processed };
 }
 
-/** Process the newest unprocessed activities first. */
-export async function processPending(athleteId: number, max: number, withDetail: boolean) {
-  const pending = check(
-    await db()
-      .from("activities")
-      .select("id")
-      .eq("processed", false)
-      .order("start_date", { ascending: false })
-      .limit(max),
-  ) as { id: number }[];
+/**
+ * Process the newest pending activities first. `outdated` also picks up
+ * activities whose metrics predate METRICS_VERSION (and refetches detail).
+ */
+export async function processPending(
+  athleteId: number,
+  max: number,
+  withDetail: boolean,
+  scope: "unprocessed" | "outdated" = "unprocessed",
+) {
+  const base = db().from("activities").select("id");
+  const filtered =
+    scope === "outdated"
+      ? base.or(`processed.eq.false,metrics_version.lt.${METRICS_VERSION},metrics_version.is.null`)
+      : base.eq("processed", false);
+  const pending = check(await filtered.order("start_date", { ascending: false }).limit(max)) as { id: number }[];
   const ctx = await loadContext(athleteId);
   let done = 0;
   try {

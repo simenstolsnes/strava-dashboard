@@ -143,6 +143,7 @@ export type StravaActivity = {
   commute?: boolean;
   workout_type?: number | null;
   gear_id?: string | null;
+  map?: { summary_polyline?: string | null; polyline?: string | null } | null;
   laps?: Array<{
     name: string;
     elapsed_time: number;

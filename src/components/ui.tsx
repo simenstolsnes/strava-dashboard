@@ -1,11 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { InfoTip } from "./info-tip";
 
 /** White plate on the granite ground. */
-export function Card({ title, subtitle, action, children, className = "" }: {
+export function Card({ title, subtitle, action, info, children, className = "" }: {
   title?: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
+  /** Deeper explanation behind an "i" button next to the title */
+  info?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
@@ -14,7 +17,12 @@ export function Card({ title, subtitle, action, children, className = "" }: {
       {(title || action) && (
         <header className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {title && <h2 className="text-sm font-bold text-ink">{title}</h2>}
+            {title && (
+              <h2 className="text-sm font-bold text-ink">
+                {title}
+                {info && <InfoTip label={`About ${typeof title === "string" ? title : "this chart"}`}>{info}</InfoTip>}
+              </h2>
+            )}
             {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
           </div>
           {action}
@@ -25,8 +33,10 @@ export function Card({ title, subtitle, action, children, className = "" }: {
   );
 }
 
-export function Stat({ label, value, unit, delta, hint }: {
+export function Stat({ label, value, unit, delta, hint, info, infoAlign }: {
   label: string;
+  info?: ReactNode;
+  infoAlign?: "start" | "end";
   value: ReactNode;
   unit?: string;
   delta?: { text: string; good: boolean | null };
@@ -34,7 +44,14 @@ export function Stat({ label, value, unit, delta, hint }: {
 }) {
   return (
     <div className="min-w-0">
-      <p className="label truncate">{label}</p>
+      <p className="label flex items-start">
+        <span className="min-w-0 break-words">{label}</span>
+        {info && (
+          <InfoTip label={`About ${label}`} align={infoAlign}>
+            {info}
+          </InfoTip>
+        )}
+      </p>
       <p className="num mt-1 text-2xl font-extrabold text-ink">
         {value}
         {unit && <span className="ml-1 text-xs font-semibold text-ink-2">{unit}</span>}
