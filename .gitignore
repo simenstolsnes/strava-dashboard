@@ -46,3 +46,5 @@ next-env.d.ts
 
 # Claude Code local settings (impeccable hooks on this machine)
 .claude/settings.local.json
+
+/example

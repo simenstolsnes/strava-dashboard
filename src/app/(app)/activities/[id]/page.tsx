@@ -2,14 +2,15 @@ import { notFound } from "next/navigation";
 import { requireAthlete } from "@/lib/auth";
 import { getActivityDetail, sportGroup } from "@/lib/queries";
 import { Card, Icon, PageTitle, Stat, ZoneBars } from "@/components/ui";
-import { ActivityCurveChart, StreamChart } from "@/components/charts";
+import { ActivityCurveChart } from "@/components/charts";
+import { StreamsPanel, type LapView } from "@/components/streams-panel";
 import { duration, km, kmh, longDate, pace } from "@/lib/format";
 import { CURVE_DURATIONS } from "@/lib/metrics";
 import { reprocess, saveNote } from "./actions";
 import { RouteMapLazy } from "@/components/route-map-lazy";
 
-// Leaflet draws with SVG attributes, which cannot read CSS variables
-const ROUTE_COLOR = { ride: "#008c83", run: "#a54f16", strength: "#6a5acd", other: "#b8860b" } as const;
+// One route colour for every sport (Leaflet draws SVG attributes, which cannot read CSS variables)
+const ROUTE_COLOR = "#008c83";
 
 export const metadata = { title: "Activity" };
 
@@ -48,6 +49,21 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
         best90: d.best90[s] ?? null,
       }))
     : [];
+
+  // Laps start back to back, so their elapsed times give each lap's span on the stream time axis
+  const lapStarts = extra.laps.reduce<number[]>((acc, l, i) => [...acc, i === 0 ? 0 : acc[i - 1] + extra.laps[i - 1].elapsed_time], []);
+  const lapViews: LapView[] = extra.laps.map((l, i) => ({
+    start: lapStarts[i],
+    end: lapStarts[i] + l.elapsed_time,
+    elapsed: l.elapsed_time,
+    moving: l.moving_time,
+    distance: l.distance,
+    avgHr: l.average_heartrate,
+    maxHr: l.max_heartrate ?? null,
+    watts: l.average_watts,
+    speed: l.average_speed,
+    cadence: l.average_cadence ?? null,
+  }));
 
   const save = saveNote.bind(null, a.id);
   const resync = reprocess.bind(null, a.id);
@@ -144,30 +160,25 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
 
       {extra.mapPolyline && !a.trainer && !/Virtual/.test(a.sport_type) && (
         <Card title="Route" subtitle="Teal dot = start, dark dot = finish. Pinch or use + / − to zoom.">
-          <RouteMapLazy polyline={extra.mapPolyline} color={ROUTE_COLOR[g]} />
+          <RouteMapLazy polyline={extra.mapPolyline} color={ROUTE_COLOR} />
         </Card>
       )}
 
       {rows.length > 0 && (
         <Card title="Streams" subtitle="Tap or hover to inspect; the charts share one cursor">
-          <div className="space-y-4">
-            {streams?.heartrate && <StreamChart data={rows} dataKey="heartrate" label="Heart rate" unit="bpm" />}
-            {streams?.watts && (
-              <StreamChart
-                data={rows}
-                dataKey="watts"
-                label="Power"
-                unit="W"
-                reference={d.ftp ? { y: d.ftp, label: `FTP ${d.ftp}` } : undefined}
-              />
-            )}
-            {streams?.velocity && a.distance > 0 && (
-              isRun
-                ? <StreamChart data={rows} dataKey="speed" label="Pace" unit="/km" valueFormat="pace" reversed />
-                : <StreamChart data={rows} dataKey="speed" label="Speed" unit="km/h" valueFormat="decimal" />
-            )}
-            {streams?.altitude && a.total_elevation_gain > 0 && <StreamChart data={rows} dataKey="altitude" label="Elevation" unit="m" height={90} />}
-          </div>
+          <StreamsPanel
+            rows={rows}
+            show={{
+              heartrate: !!streams?.heartrate,
+              watts: !!streams?.watts,
+              speed: !!streams?.velocity && a.distance > 0,
+              altitude: !!streams?.altitude && a.total_elevation_gain > 0,
+            }}
+            isRun={isRun}
+            ftp={d.ftp}
+            laps={lapViews}
+            hrZones={d.profile.hrZones}
+          />
         </Card>
       )}
 

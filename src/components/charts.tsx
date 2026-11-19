@@ -442,6 +442,9 @@ export function TrendChart({
 
 // ---------- Activity streams (small multiples sharing a crosshair) ----------
 
+/** Plot-area insets of the stream charts, so the lap strip can line up with them. */
+export const STREAM_PLOT = { left: 52, right: 4 };
+
 export function StreamChart({
   data,
   dataKey,
@@ -452,6 +455,9 @@ export function StreamChart({
   reference,
   reversed = false,
   height = 120,
+  laps,
+  selectedLap = null,
+  onPickTime,
 }: {
   data: Array<Record<string, number | null>>;
   dataKey: string;
@@ -463,6 +469,11 @@ export function StreamChart({
   reference?: { y: number; label: string };
   reversed?: boolean;
   height?: number;
+  /** Lap boundaries in stream seconds; drawn as alternating bands with divider lines */
+  laps?: { start: number; end: number }[];
+  selectedLap?: number | null;
+  /** Called with the clicked time (s), so a lap can be selected from the chart */
+  onPickTime?: (t: number) => void;
 }) {
   const f =
     valueFormat === "pace"
@@ -481,11 +492,34 @@ export function StreamChart({
     <div>
       <p className="mb-1 text-xs font-medium text-ink-2">{label}</p>
       <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart data={data} syncId="activity" margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+        <ComposedChart
+          data={data}
+          syncId="activity"
+          margin={{ top: 4, right: STREAM_PLOT.right, left: 0, bottom: 0 }}
+          onClick={(st) => {
+            const t = Number((st as { activeLabel?: unknown } | null)?.activeLabel);
+            if (onPickTime && Number.isFinite(t)) onPickTime(t);
+          }}
+          style={onPickTime ? { cursor: "pointer" } : undefined}
+        >
+          {laps?.map((l, i) => (
+            <ReferenceArea
+              key={`band-${i}`}
+              x1={l.start}
+              x2={l.end}
+              ifOverflow="hidden"
+              fill={i === selectedLap ? "var(--teal)" : "var(--rock-2)"}
+              fillOpacity={i === selectedLap ? 0.16 : i % 2 ? 0.55 : 0}
+              strokeOpacity={0}
+            />
+          ))}
           {GRID}
+          {laps?.slice(1).map((l, i) => (
+            <ReferenceLine key={`div-${i}`} x={l.start} stroke="var(--border)" strokeWidth={1} ifOverflow="hidden" />
+          ))}
           <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} {...AXIS} tickFormatter={minutes} minTickGap={40} />
-          <YAxis {...AXIS} axisLine={false} width={52} domain={["auto", "auto"]} reversed={reversed} tickFormatter={(v) => f(v).replace(/ .*/, "")} />
-          {reference && <ReferenceLine y={reference.y} stroke="var(--muted)" label={{ value: reference.label, fill: "var(--muted)", fontSize: 12, position: "insideTopRight" }} />}
+          <YAxis {...AXIS} axisLine={false} width={STREAM_PLOT.left} domain={["auto", "auto"]} reversed={reversed} tickFormatter={(v) => f(v).replace(/ .*/, "")} />
+          {reference &&<ReferenceLine y={reference.y} stroke="var(--muted)" label={{ value: reference.label, fill: "var(--muted)", fontSize: 12, position: "insideTopRight" }} />}
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => minutes(l))} />
           <Area dataKey={dataKey} stroke={color} strokeWidth={1.5} fill={color} fillOpacity={0.1} dot={false} connectNulls isAnimationActive={false} />
         </ComposedChart>

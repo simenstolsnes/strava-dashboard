@@ -568,7 +568,9 @@ export type Lap = {
   distance: number;
   average_speed: number;
   average_heartrate: number | null;
+  max_heartrate?: number | null;
   average_watts: number | null;
+  average_cadence?: number | null;
 };
 
 export async function getActivityDetail(id: number) {
