@@ -20,11 +20,20 @@ import type { ReactNode } from "react";
 
 // ---------- shared chrome ----------
 
-const AXIS = { stroke: "var(--axis)", tickLine: false, tick: { fill: "var(--muted)", fontSize: 11 } } as const;
-const GRID = <CartesianGrid stroke="var(--grid)" vertical={false} />;
+const AXIS = { stroke: "var(--border)", tickLine: false, tick: { fill: "var(--muted)", fontSize: 12 } } as const;
+const GRID = <CartesianGrid stroke="var(--hairline)" vertical={false} />;
 const CURSOR = { stroke: "var(--muted)", strokeWidth: 1 };
+const compact = (v: number) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 2)}k` : String(Math.round(v)));
 
-export type Series = { key: string; label: string; color: string; format?: (v: number) => string };
+/** `dashed` marks an estimate: drawn dashed everywhere, measured values stay solid. */
+export type Series = { key: string; label: string; color: string; format?: (v: number) => string; dashed?: boolean };
+
+const lineKey = (s: Series, w = 12) =>
+  s.dashed ? (
+    <span className="inline-block shrink-0" style={{ width: w, borderTop: `2px dashed ${s.color}` }} />
+  ) : (
+    <span className="inline-block h-0.5 shrink-0 rounded" style={{ width: w, background: s.color }} />
+  );
 
 type TipProps = {
   active?: boolean;
@@ -38,15 +47,15 @@ function makeTip(series: Series[], labelFormat: (l: string | number, row?: Recor
     if (!active || !payload?.length) return null;
     const row = payload[0]?.payload;
     return (
-      <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-lg">
+      <div className="rounded-lg border border-line bg-plate px-3 py-2 text-xs shadow-lg">
         <p className="mb-1 text-muted">{labelFormat(label ?? "", row)}</p>
         {series.map((s) => {
           const v = row?.[s.key];
           if (v == null) return null;
           return (
             <p key={s.key} className="flex items-center gap-2">
-              <span className="inline-block h-0.5 w-3 rounded" style={{ background: s.color }} />
-              <span className="tabular font-semibold text-ink">{s.format ? s.format(Number(v)) : String(v)}</span>
+              {lineKey(s)}
+              <span className="num font-semibold text-ink">{s.format ? s.format(Number(v)) : String(v)}</span>
               <span className="text-ink-2">{s.label}</span>
             </p>
           );
@@ -61,10 +70,7 @@ export function Legend({ series, shape = "line" }: { series: Series[]; shape?: "
     <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
       {series.map((s) => (
         <li key={s.key} className="flex items-center gap-1.5">
-          <span
-            className={shape === "line" ? "inline-block h-0.5 w-3.5 rounded" : "inline-block h-2.5 w-2.5 rounded-sm"}
-            style={{ background: s.color }}
-          />
+          {shape === "line" ? lineKey(s, 16) : <span className="inline-block h-2.5 w-2.5 rounded-[2px]" style={{ background: s.color }} />}
           {s.label}
         </li>
       ))}
@@ -79,22 +85,32 @@ const monthLabel = (m: string | number) =>
 
 // ---------- Fitness & fatigue ----------
 
-export function FitnessChart({ data }: { data: { date: string; fitness: number; fatigue: number }[] }) {
+export function FitnessChart({
+  data,
+}: {
+  data: { date: string; fitness?: number; fatigue?: number; fitnessRest?: number; fatigueRest?: number }[];
+}) {
   const series: Series[] = [
-    { key: "fitness", label: "Fitness", color: "var(--s1)", format: (v) => v.toFixed(0) },
-    { key: "fatigue", label: "Fatigue", color: "var(--s2)", format: (v) => v.toFixed(0) },
+    { key: "fitness", label: "Fitness", color: "var(--fitness)", format: (v) => v.toFixed(0) },
+    { key: "fatigue", label: "Fatigue", color: "var(--fatigue)", format: (v) => v.toFixed(0) },
+    { key: "fitnessRest", label: "Fitness if you rest", color: "var(--fitness)", format: (v) => v.toFixed(0), dashed: true },
+    { key: "fatigueRest", label: "Fatigue if you rest", color: "var(--fatigue)", format: (v) => v.toFixed(0), dashed: true },
   ];
+  const today = data.find((d) => d.fitnessRest != null && d.fitness != null)?.date;
   return (
     <>
-      <Legend series={series} />
+      <Legend series={[series[0], series[1], { ...series[2], label: "Next 7 days if you rest", color: "var(--muted)" }]} />
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           {GRID}
           <XAxis dataKey="date" {...AXIS} tickFormatter={dayLabel} minTickGap={40} />
-          <YAxis {...AXIS} axisLine={false} width={48} />
+          <YAxis {...AXIS} axisLine={false} width={32} />
+          {today && <ReferenceLine x={today} stroke="var(--muted)" strokeWidth={1} />}
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => dayLabel(l))} />
-          <Area dataKey="fitness" stroke="var(--s1)" strokeWidth={2} fill="var(--s1)" fillOpacity={0.1} dot={false} isAnimationActive={false} />
-          <Line dataKey="fatigue" stroke="var(--s2)" strokeWidth={2} dot={false} isAnimationActive={false} />
+          <Area dataKey="fitness" stroke="var(--fitness)" strokeWidth={2} fill="var(--fitness)" fillOpacity={0.1} dot={false} isAnimationActive={false} />
+          <Line dataKey="fatigue" stroke="var(--fatigue)" strokeWidth={2} dot={false} isAnimationActive={false} />
+          <Line dataKey="fitnessRest" stroke="var(--fitness)" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
+          <Line dataKey="fatigueRest" stroke="var(--fatigue)" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </>
@@ -102,21 +118,21 @@ export function FitnessChart({ data }: { data: { date: string; fitness: number; 
 }
 
 export function FormChart({ data }: { data: { date: string; form: number }[] }) {
-  const series: Series[] = [{ key: "form", label: "Form", color: "var(--s7)", format: (v) => v.toFixed(0) }];
+  const series: Series[] = [{ key: "form", label: "Form", color: "var(--form)", format: (v) => v.toFixed(0) }];
   const min = Math.min(-35, ...data.map((d) => d.form));
   const max = Math.max(30, ...data.map((d) => d.form));
   return (
     <>
       <ResponsiveContainer width="100%" height={150}>
-        <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           <ReferenceArea y1={-30} y2={-10} fill="var(--good)" fillOpacity={0.08} />
           <ReferenceArea y1={min} y2={-30} fill="var(--critical)" fillOpacity={0.08} />
           {GRID}
-          <ReferenceLine y={0} stroke="var(--axis)" />
+          <ReferenceLine y={0} stroke="var(--border)" />
           <XAxis dataKey="date" {...AXIS} tickFormatter={dayLabel} minTickGap={40} />
-          <YAxis {...AXIS} axisLine={false} width={48} domain={[Math.floor(min), Math.ceil(max)]} />
+          <YAxis {...AXIS} axisLine={false} width={32} domain={[Math.floor(min), Math.ceil(max)]} />
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => dayLabel(l))} />
-          <Line dataKey="form" stroke="var(--s7)" strokeWidth={2} dot={false} isAnimationActive={false} />
+          <Line dataKey="form" stroke="var(--form)" strokeWidth={2} dot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
       <p className="mt-1 text-xs text-muted">
@@ -129,10 +145,10 @@ export function FormChart({ data }: { data: { date: string; form: number }[] }) 
 // ---------- Stacked hours by sport ----------
 
 const SPORT_SERIES: Series[] = [
-  { key: "ride", label: "Ride", color: "var(--s1)", format: (v) => `${v.toFixed(1)} h` },
-  { key: "run", label: "Run", color: "var(--s2)", format: (v) => `${v.toFixed(1)} h` },
-  { key: "strength", label: "Strength & HIIT", color: "var(--s3)", format: (v) => `${v.toFixed(1)} h` },
-  { key: "other", label: "Other", color: "var(--s4)", format: (v) => `${v.toFixed(1)} h` },
+  { key: "ride", label: "Ride", color: "var(--s-ride)", format: (v) => `${v.toFixed(1)} h` },
+  { key: "run", label: "Run", color: "var(--s-run)", format: (v) => `${v.toFixed(1)} h` },
+  { key: "strength", label: "Strength & HIIT", color: "var(--s-strength)", format: (v) => `${v.toFixed(1)} h` },
+  { key: "other", label: "Other", color: "var(--s-other)", format: (v) => `${v.toFixed(1)} h` },
 ];
 
 export function SportHoursChart({ data, by }: { data: Array<Record<string, number | string>>; by: "week" | "month" }) {
@@ -142,16 +158,16 @@ export function SportHoursChart({ data, by }: { data: Array<Record<string, numbe
     <>
       <Legend series={SPORT_SERIES} shape="rect" />
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }} barCategoryGap="25%">
+        <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="25%">
           {GRID}
           <XAxis dataKey={xKey} {...AXIS} tickFormatter={fmt} minTickGap={8} />
-          <YAxis {...AXIS} axisLine={false} width={48} unit="h" />
+          <YAxis {...AXIS} axisLine={false} width={32} tickFormatter={(v) => `${v}h`} />
           <Tooltip
-            cursor={{ fill: "var(--surface-2)" }}
+            cursor={{ fill: "var(--rock)" }}
             content={makeTip(SPORT_SERIES, (l) => (by === "week" ? `Week of ${dayLabel(l)}` : monthLabel(l)))}
           />
           {SPORT_SERIES.map((s) => (
-            <Bar key={s.key} dataKey={s.key} stackId="h" fill={s.color} stroke="var(--surface)" strokeWidth={2} maxBarSize={24} isAnimationActive={false} />
+            <Bar key={s.key} dataKey={s.key} stackId="h" fill={s.color} stroke="var(--plate)" strokeWidth={2} maxBarSize={24} isAnimationActive={false} />
           ))}
         </BarChart>
       </ResponsiveContainer>
@@ -172,19 +188,19 @@ export function PowerCurveChart({
 }) {
   const w = (v: number) => (weight ? `${v} W · ${(v / weight).toFixed(2)} W/kg` : `${v} W`);
   const series: Series[] = [
-    { key: "last90", label: "Last 90 days", color: "var(--s1)", format: w },
-    { key: "prev90", label: "90 days before", color: "var(--s2)", format: w },
-    { key: "allTime", label: "All synced", color: "var(--s3)", format: w },
+    { key: "last90", label: "Last 90 days", color: "var(--s-ride)", format: w },
+    { key: "prev90", label: "90 days before", color: "var(--ink-2)", format: w },
+    { key: "allTime", label: "All synced", color: "var(--s-strength)", format: w },
   ];
   const rows = data.map((d) => ({ ...d, label: curveLabel(d.seconds) }));
   return (
     <>
       <Legend series={series} />
       <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={rows} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+        <LineChart data={rows} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           {GRID}
           <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" minTickGap={4} />
-          <YAxis {...AXIS} axisLine={false} width={52} unit=" W" />
+          <YAxis {...AXIS} axisLine={false} width={40} tickFormatter={compact} />
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => `Best ${l}`)} />
           {series.map((s) => (
             <Line
@@ -193,7 +209,7 @@ export function PowerCurveChart({
               stroke={s.color}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, stroke: "var(--surface)", strokeWidth: 2 }}
+              activeDot={{ r: 4, stroke: "var(--plate)", strokeWidth: 2 }}
               connectNulls
               isAnimationActive={false}
             />
@@ -206,18 +222,18 @@ export function PowerCurveChart({
 
 export function MonthlyPowerChart({ data }: { data: { month: string; p1m: number | null; p5m: number | null; p20m: number | null }[] }) {
   const series: Series[] = [
-    { key: "p1m", label: "1 min", color: "var(--s1)", format: (v) => `${v} W` },
-    { key: "p5m", label: "5 min", color: "var(--s2)", format: (v) => `${v} W` },
-    { key: "p20m", label: "20 min", color: "var(--s3)", format: (v) => `${v} W` },
+    { key: "p1m", label: "1 min", color: "var(--s-ride)", format: (v) => `${v} W` },
+    { key: "p5m", label: "5 min", color: "var(--s-strength)", format: (v) => `${v} W` },
+    { key: "p20m", label: "20 min", color: "var(--ink-2)", format: (v) => `${v} W` },
   ];
   return (
     <>
       <Legend series={series} />
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           {GRID}
           <XAxis dataKey="month" {...AXIS} tickFormatter={monthLabel} />
-          <YAxis {...AXIS} axisLine={false} width={52} unit=" W" />
+          <YAxis {...AXIS} axisLine={false} width={40} tickFormatter={compact} />
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => monthLabel(l))} />
           {series.map((s) => (
             <Line
@@ -225,7 +241,7 @@ export function MonthlyPowerChart({ data }: { data: { month: string; p1m: number
               dataKey={s.key}
               stroke={s.color}
               strokeWidth={2}
-              dot={{ r: 3, fill: s.color, stroke: "var(--surface)", strokeWidth: 2 }}
+              dot={{ r: 3, fill: s.color, stroke: "var(--plate)", strokeWidth: 2 }}
               connectNulls
               isAnimationActive={false}
             />
@@ -251,15 +267,35 @@ export function TrendChart({
     ? (v: number) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, "0")} /km`
     : (v: number) => `${Math.round(v)} W`;
   const series: Series[] = [
-    { key: "value", label, color: "var(--s1)", format: fmt },
-    { key: "trend", label: "6-week trend", color: "var(--ink-2)", format: fmt },
+    { key: "value", label, color: "var(--s-ride)", format: fmt },
+    { key: "trend", label: "6-week trend (estimate)", color: "var(--ink-2)", format: fmt, dashed: true },
   ];
-  const rows = data.map((d) => ({ ...d, t: new Date(`${d.date}T00:00:00Z`).getTime() }));
+  // Clamp the axis to the 5th–95th percentile so one odd session can't flatten the trend;
+  // out-of-range sessions sit on the edge as hollow marks (the tooltip keeps the real value).
+  const sorted = data.map((d) => d.value).sort((a, b) => a - b);
+  const q = (p: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))] ?? 0;
+  const pad = Math.max(1, (q(0.95) - q(0.05)) * 0.2);
+  // Round outward to nice steps: 30 s for pace, 25 W for power (doubling until ≤ 6 ticks)
+  let step = kind === "pace" ? 30 : 25;
+  const rawLo = q(0.05) - pad;
+  const rawHi = q(0.95) + pad;
+  while ((rawHi - rawLo) / step > 5) step *= 2;
+  const lo = Math.floor(rawLo / step) * step;
+  const hi = Math.ceil(rawHi / step) * step;
+  const ticks = Array.from({ length: Math.round((hi - lo) / step) + 1 }, (_, i) => lo + i * step);
+  // Off-scale sessions sit just inside the edge so their marker renders whole
+  const inset = (hi - lo) * 0.03;
+  const rows = data.map((d) => ({
+    ...d,
+    t: new Date(`${d.date}T00:00:00Z`).getTime(),
+    plot: d.value < lo ? lo + inset : d.value > hi ? hi - inset : d.value,
+    clamped: d.value < lo || d.value > hi,
+  }));
   return (
     <>
-      <Legend series={[{ ...series[0], label: "Session" }, series[1]]} />
+      <Legend series={[{ ...series[0], label: "Session (hollow = off the scale)" }, series[1]]} />
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={rows} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+        <ComposedChart data={rows} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           {GRID}
           <XAxis
             dataKey="t"
@@ -275,12 +311,24 @@ export function TrendChart({
             axisLine={false}
             width={56}
             reversed={kind === "pace"}
-            domain={["auto", "auto"]}
+            domain={[lo, hi]}
+            ticks={ticks}
+            allowDataOverflow
             tickFormatter={(v) => fmt(v).replace(" /km", "")}
           />
           <Tooltip cursor={CURSOR} content={makeTip(series, (_, row) => `${row?.name ?? ""} · ${dayLabel(String(row?.date))}`)} />
-          <Scatter dataKey="value" fill="var(--s1)" fillOpacity={0.55} isAnimationActive={false} />
-          <Line dataKey="trend" stroke="var(--ink-2)" strokeWidth={2} dot={false} isAnimationActive={false} />
+          <Scatter
+            dataKey="plot"
+            isAnimationActive={false}
+            shape={(props: { cx?: number; cy?: number; payload?: { clamped?: boolean } }) =>
+              props.payload?.clamped ? (
+                <circle cx={props.cx} cy={props.cy} r={4} fill="var(--plate)" stroke="var(--s-ride)" strokeWidth={1.5} />
+              ) : (
+                <circle cx={props.cx} cy={props.cy} r={4} fill="var(--s-ride)" fillOpacity={0.6} />
+              )
+            }
+          />
+          <Line dataKey="trend" stroke="var(--ink-2)" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </>
@@ -294,8 +342,8 @@ export function StreamChart({
   dataKey,
   label,
   unit,
-  color = "var(--s1)",
-  format,
+  color = "var(--s-ride)",
+  valueFormat = "round",
   reference,
   reversed = false,
   height = 120,
@@ -305,12 +353,18 @@ export function StreamChart({
   label: string;
   unit: string;
   color?: string;
-  format?: (v: number) => string;
+  /** Serializable format choice (functions can't cross the server/client boundary) */
+  valueFormat?: "round" | "pace" | "decimal";
   reference?: { y: number; label: string };
   reversed?: boolean;
   height?: number;
 }) {
-  const f = format ?? ((v: number) => `${Math.round(v)} ${unit}`);
+  const f =
+    valueFormat === "pace"
+      ? (v: number) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, "0")} ${unit}`
+      : valueFormat === "decimal"
+        ? (v: number) => `${v.toFixed(1)} ${unit}`
+        : (v: number) => `${Math.round(v)} ${unit}`;
   const series: Series[] = [{ key: dataKey, label, color, format: f }];
   const minutes = (s: number | string) => {
     const n = Number(s);
@@ -322,11 +376,11 @@ export function StreamChart({
     <div>
       <p className="mb-1 text-xs font-medium text-ink-2">{label}</p>
       <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart data={data} syncId="activity" margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+        <ComposedChart data={data} syncId="activity" margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           {GRID}
           <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} {...AXIS} tickFormatter={minutes} minTickGap={40} />
           <YAxis {...AXIS} axisLine={false} width={52} domain={["auto", "auto"]} reversed={reversed} tickFormatter={(v) => f(v).replace(/ .*/, "")} />
-          {reference && <ReferenceLine y={reference.y} stroke="var(--muted)" label={{ value: reference.label, fill: "var(--muted)", fontSize: 10, position: "insideTopRight" }} />}
+          {reference && <ReferenceLine y={reference.y} stroke="var(--muted)" label={{ value: reference.label, fill: "var(--muted)", fontSize: 12, position: "insideTopRight" }} />}
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => minutes(l))} />
           <Area dataKey={dataKey} stroke={color} strokeWidth={1.5} fill={color} fillOpacity={0.1} dot={false} connectNulls isAnimationActive={false} />
         </ComposedChart>
@@ -339,18 +393,18 @@ export function StreamChart({
 
 export function ActivityCurveChart({ data }: { data: { seconds: number; activity: number | null; best90: number | null }[] }) {
   const series: Series[] = [
-    { key: "activity", label: "This activity", color: "var(--s1)", format: (v) => `${v} W` },
-    { key: "best90", label: "90-day best", color: "var(--s2)", format: (v) => `${v} W` },
+    { key: "activity", label: "This activity", color: "var(--s-ride)", format: (v) => `${v} W` },
+    { key: "best90", label: "90-day best", color: "var(--ink-2)", format: (v) => `${v} W` },
   ];
   const rows = data.map((d) => ({ ...d, label: curveLabel(d.seconds) }));
   return (
     <>
       <Legend series={series} />
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={rows} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+        <LineChart data={rows} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           {GRID}
           <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" />
-          <YAxis {...AXIS} axisLine={false} width={52} unit=" W" />
+          <YAxis {...AXIS} axisLine={false} width={40} tickFormatter={compact} />
           <Tooltip cursor={CURSOR} content={makeTip(series, (l) => `Best ${l}`)} />
           {series.map((s) => (
             <Line key={s.key} dataKey={s.key} stroke={s.color} strokeWidth={2} dot={false} connectNulls isAnimationActive={false} />

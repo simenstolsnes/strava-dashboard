@@ -9,7 +9,7 @@
  */
 process.loadEnvFile(".env.local");
 
-import { strava, rateLimit } from "../src/lib/strava";
+import { strava } from "../src/lib/strava";
 import { upsertSummaries, processPending, refreshAthlete } from "../src/lib/sync";
 import { db } from "../src/lib/db";
 
@@ -45,15 +45,15 @@ async function main() {
   for (;;) {
     const res = await processPending(athleteId, 25, false);
     const left = await countPending();
-    console.log(
-      `  +${res.processed}, ${left} left · API usage ${rateLimit.short.join("/")} (15 min), ${rateLimit.daily.join("/")} (day)`,
-    );
+    // Use the counters reported by the module that made the requests
+    const rl = res.rateLimit;
+    console.log(`  +${res.processed}, ${left} left · API usage ${rl.short.join("/")} (15 min), ${rl.daily.join("/")} (day)`);
     if (left === 0) break;
-    if (rateLimit.daily[0] >= rateLimit.daily[1] - 5) {
+    if (rl.daily[0] >= rl.daily[1] - 5) {
       console.log("Daily Strava limit reached. Run this again tomorrow to continue.");
       return;
     }
-    if (res.rateLimited || rateLimit.short[0] >= rateLimit.short[1] - 5) {
+    if (res.rateLimited || rl.short[0] >= rl.short[1] - 5) {
       const wait = secondsToNextWindow();
       console.log(`  Rate limit reached, waiting ${Math.ceil(wait / 60)} min…`);
       await sleep(wait);

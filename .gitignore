@@ -43,3 +43,6 @@ next-env.d.ts
 .vercel
 .env*
 !.env.example
+
+# Claude Code local settings (impeccable hooks on this machine)
+.claude/settings.local.json

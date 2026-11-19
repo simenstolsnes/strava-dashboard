@@ -1,111 +1,157 @@
+import Link from "next/link";
 import { requireAthlete } from "@/lib/auth";
-import { formZone, getOverview, getProfile } from "@/lib/queries";
-import { Card, Empty, PageTitle, Stat, TextLink, ZoneBars } from "@/components/ui";
-import { FitnessChart, FormChart, SportHoursChart } from "@/components/charts";
-import { hours, km } from "@/lib/format";
+import { getGoals, getOverview, getProfile, sportGroup, tssOf } from "@/lib/queries";
+import { trailGrade } from "@/lib/guidance";
+import { keyFacts } from "@/lib/facts";
+import { Card, Empty, GradeMark, PageTitle, Signpost, SportDot, Stat, TextLink, ZoneBars, type Arm } from "@/components/ui";
+import { FitnessChart, SportHoursChart } from "@/components/charts";
+import { km, longDate } from "@/lib/format";
 import { ActivityRow } from "@/components/activity-row";
 
 export const metadata = { title: "Today" };
 
+const hm = (s: number) => `${Math.floor(s / 3600)}:${String(Math.round((s % 3600) / 60)).padStart(2, "0")}`;
+
 export default async function TodayPage() {
   await requireAthlete();
-  const [o, profile] = await Promise.all([getOverview(), getProfile()]);
+  const [o, profile, goals] = await Promise.all([getOverview(), getProfile(), getGoals()]);
+  const first = profile.name.split(" ")[0] || "there";
+  const date = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Oslo" });
 
   if (!o.now) {
     return (
       <>
-        <PageTitle>Welcome 👋</PageTitle>
-        <Empty>
-          No activities yet. Your latest workouts are being imported. Refresh in a minute, or run the backfill
-          script to import your full history (see README).
-        </Empty>
+        <PageTitle wide aside={<p className="pb-1 text-xs text-teal-ink">{date}</p>}>
+          Hi {first}
+        </PageTitle>
+        <Empty>No activities yet. Your latest workouts are being imported; refresh in a minute.</Empty>
       </>
     );
   }
 
-  const zone = formZone(o.now.form);
+  const grade = trailGrade(o.now.form);
   const fitDelta = o.weekAgo ? o.now.fitness - o.weekAgo.fitness : 0;
-  const pctOf = (cur: number, avg: number) => (avg ? Math.round((cur / avg) * 100) : null);
-  const loadPct = pctOf(o.thisWeek.load, o.avg4.load);
+  // Form advice is carried by the signpost and grade; only the extra flags show here.
+  const warnings = o.advice.filter((a) => a.title.startsWith("Fitness rising fast") || a.title.includes("zone 1–2"));
+
+  const arms: Arm[] = [];
+  if (o.suggestion) {
+    arms.push({
+      tone: "next",
+      label: "Next",
+      title: o.suggestion.title,
+      meta: o.suggestion.meta || undefined,
+      href: o.suggestion.basis ? `/activities/${o.suggestion.basis.id}` : undefined,
+    });
+  }
+  for (const g of goals.slice(0, 3)) {
+    arms.push({ tone: g.pct >= 100 ? "done" : "goal", label: "Goal", title: g.title, meta: g.left, href: "/goals" });
+  }
+  if (!goals.length) arms.push({ tone: "goal", label: "Goal", title: "Set your first goal", href: "/goals" });
+
+  const jf = o.justFinished;
 
   return (
-    <div className="space-y-4">
-      <PageTitle sub={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Oslo" })}>
-        Hi {profile.name.split(" ")[0] || "there"}
+    <>
+      <PageTitle wide aside={<p className="pb-1 text-xs text-teal-ink">{date}</p>}>
+        Hi {first}
       </PageTitle>
 
-      <Card>
-        <div className="grid grid-cols-3 gap-3">
-          <Stat
-            label="Fitness"
-            value={o.now.fitness.toFixed(0)}
-            delta={{ text: `${Math.abs(fitDelta).toFixed(1)} this week`, good: fitDelta === 0 ? null : fitDelta > 0 }}
-          />
-          <Stat label="Fatigue" value={o.now.fatigue.toFixed(0)} />
-          <Stat label="Form" value={o.now.form.toFixed(0)} hint={zone.label} />
-        </div>
-        <p className="mt-3 text-xs text-muted">
-          Estimated from Relative Effort (Strava) with TSS as fallback. Fitness = 42-day load, fatigue = 7-day load.
-        </p>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+        {/* Rail: what to do and how you stand */}
+        <div className="space-y-4 lg:sticky lg:top-16">
+          {jf && (
+            <Link href={`/activities/${jf.id}`} className="block rounded-[10px] border-2 border-rust bg-plate p-4">
+              <div className="flex items-center gap-2">
+                <SportDot group={sportGroup(jf.sport_type)} />
+                <p className="label" style={{ color: "var(--rust)" }}>
+                  Just finished
+                </p>
+                <p className="ml-auto text-xs text-muted">{longDate(jf.start_date_local).split(",").slice(-1)[0]}</p>
+              </div>
+              <p className="mt-1.5 truncate text-lg font-extrabold text-ink">{jf.name}</p>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {keyFacts(jf, tssOf(jf, o.ftp)).map((f) => (
+                  <div key={f.label} className="min-w-0">
+                    <p className="label truncate">{f.label}</p>
+                    <p className="num mt-0.5 text-sm font-extrabold text-ink">
+                      {f.value}
+                      {f.unit && <span className="ml-0.5 text-xs font-semibold text-ink-2">{f.unit}</span>}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Link>
+          )}
 
-      {o.advice.length > 0 && (
-        <Card title="Suggestions" subtitle="Rule-based on your form, ramp rate and intensity mix. Ask Claude for a full plan.">
-          <ul className="space-y-3">
-            {o.advice.map((a) => (
-              <li key={a.title} className="flex gap-3">
-                <span
-                  className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: a.tone === "warn" ? "var(--warning)" : a.tone === "good" ? "var(--good)" : "var(--s1)" }}
-                  aria-hidden
-                />
-                <div>
-                  <p className="text-sm font-semibold text-ink">
-                    {a.tone === "warn" ? "⚠ " : ""}
-                    {a.title}
-                  </p>
-                  <p className="text-sm text-ink-2">{a.text}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+          <Signpost arms={arms} note={o.suggestion?.detail} />
 
-      <Card title="This week" subtitle="Compared with your average of the previous 4 weeks">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Stat label="Time" value={hours(o.thisWeek.time)} hint={`avg ${hours(o.avg4.time)}`} />
-          <Stat label="Distance" value={km(o.thisWeek.distance, 0)} hint={`avg ${km(o.avg4.distance, 0)}`} />
-          <Stat label="Sessions" value={o.thisWeek.count} hint={`avg ${o.avg4.count.toFixed(1)}`} />
-          <Stat label="Load" value={Math.round(o.thisWeek.load)} hint={loadPct !== null ? `${loadPct}% of avg` : undefined} />
-        </div>
-      </Card>
+          <section className="flex items-center gap-4 rounded-[10px] border border-line bg-plate p-4">
+            <GradeMark grade={grade.grade} />
+            <div className="min-w-0">
+              <p className="text-lg font-extrabold text-ink">
+                Form{" "}
+                <span className="num">
+                  {o.now.form > 0 ? "+" : ""}
+                  {o.now.form.toFixed(0)}
+                </span>
+                <span className="text-ink-2"> · {grade.zone}</span>
+              </p>
+              <p className="text-sm text-ink-2">{grade.text}</p>
+            </div>
+          </section>
 
-      <Card title="Fitness & fatigue" subtitle="Last 6 months">
-        <FitnessChart data={o.series} />
-      </Card>
-
-      <Card title="Form" subtitle="Fitness − fatigue. Negative = building, positive = fresh">
-        <FormChart data={o.series} />
-      </Card>
-
-      <Card title="Weekly hours" subtitle="Last 12 weeks by sport">
-        <SportHoursChart data={o.weekly} by="week" />
-      </Card>
-
-      {o.zoneTotals.length > 0 && (
-        <Card title="Heart-rate zones" subtitle="Last 28 days, all sports">
-          <ZoneBars seconds={o.zoneTotals} />
-        </Card>
-      )}
-
-      <Card title="Latest activities" action={<TextLink href="/activities">All</TextLink>}>
-        <ul className="-mx-1 divide-y divide-line">
-          {o.recent.map((a) => (
-            <ActivityRow key={a.id} a={a} />
+          {warnings.map((w) => (
+            <p key={w.title} className="flex gap-2.5 rounded-[10px] border border-line bg-plate px-4 py-3 text-sm text-ink-2">
+              <svg width="16" height="16" viewBox="0 0 16 16" className="mt-0.5 shrink-0" aria-hidden>
+                <path d="M8 1.5l7 12.5H1z" fill="none" stroke="var(--rust)" strokeWidth="1.6" strokeLinejoin="round" />
+                <path d="M8 6v4M8 11.6v.4" stroke="var(--rust)" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <span>
+                <strong className="font-bold text-ink">{w.title}.</strong> {w.text}
+              </span>
+            </p>
           ))}
-        </ul>
-      </Card>
-    </div>
+
+          <section className="grid grid-cols-3 gap-3 rounded-[10px] border border-line bg-plate p-4">
+            <Stat
+              label="Fitness"
+              value={o.now.fitness.toFixed(0)}
+              delta={{ text: `${Math.abs(fitDelta).toFixed(1)} / 7 d`, good: Math.abs(fitDelta) < 0.05 ? null : fitDelta > 0 }}
+            />
+            <Stat label="Fatigue" value={o.now.fatigue.toFixed(0)} />
+            <Stat label="This week" value={hm(o.thisWeek.time)} unit="h" hint={`avg ${hm(o.avg4.time)} h`} />
+          </section>
+        </div>
+
+        {/* Detail: trends and history */}
+        <div className="space-y-4">
+          <Card title="Fitness and fatigue" subtitle="Estimated from Relative Effort (TSS when there’s no heart rate). Dashed = projection.">
+            <FitnessChart data={o.chart} />
+          </Card>
+
+          <Card
+            title="Weekly hours"
+            subtitle={`This week ${km(o.thisWeek.distance, 0)} in ${o.thisWeek.count} sessions · load ${Math.round(o.thisWeek.load)}`}
+          >
+            <SportHoursChart data={o.weekly} by="week" />
+          </Card>
+
+          {o.zoneTotals.length > 0 && (
+            <Card title="Heart-rate zones" subtitle="Last 28 days, all sports">
+              <ZoneBars seconds={o.zoneTotals} />
+            </Card>
+          )}
+
+          <Card title="Latest sessions" action={<TextLink href="/activities">All</TextLink>}>
+            <ul className="-mx-1 divide-y divide-hairline">
+              {o.recent.map((a) => (
+                <ActivityRow key={a.id} a={a} />
+              ))}
+            </ul>
+          </Card>
+        </div>
+      </div>
+    </>
   );
 }

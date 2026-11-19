@@ -2,18 +2,32 @@
 
 import { useState } from "react";
 import { createGoal } from "./actions";
+import { Icon } from "@/components/ui";
 
-const input = "w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-sm text-ink";
+export type Preset = {
+  kind: "volume" | "power_best" | "ftp" | "fitness";
+  sport?: "run" | "ride" | "all";
+  measure?: "distance" | "time" | "sessions";
+  period?: "week" | "month" | "year";
+  duration_s?: number;
+  target?: number;
+};
 
-export function GoalForm() {
-  const [kind, setKind] = useState("volume");
-  const [measure, setMeasure] = useState("distance");
-  const [open, setOpen] = useState(false);
+const input = "w-full rounded-lg border border-line bg-plate px-3 py-2 text-sm text-ink placeholder:text-muted";
+
+export function GoalForm({ preset, startOpen = false }: { preset?: Preset; startOpen?: boolean }) {
+  const [kind, setKind] = useState<string>(preset?.kind ?? "volume");
+  const [measure, setMeasure] = useState<string>(preset?.measure ?? "distance");
+  const [open, setOpen] = useState(startOpen);
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="w-full rounded-xl border border-dashed border-line py-3 text-sm font-medium text-ink">
-        + Add goal
+      <button
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-line bg-plate py-3 text-sm font-semibold text-teal hover:border-teal"
+      >
+        <Icon name="plus" size={16} />
+        Add goal
       </button>
     );
   }
@@ -21,7 +35,7 @@ export function GoalForm() {
   const unit = kind === "volume" ? (measure === "distance" ? "km" : measure === "time" ? "hours" : "sessions") : kind === "fitness" ? "fitness" : "watts";
 
   return (
-    <form action={async (fd) => { await createGoal(fd); setOpen(false); }} className="space-y-3 rounded-2xl border border-line bg-surface p-4">
+    <form action={async (fd) => { await createGoal(fd); setOpen(false); }} className="space-y-3 rounded-[10px] border border-line bg-plate p-4">
       <label className="block text-xs text-muted">
         Type
         <select name="kind" value={kind} onChange={(e) => setKind(e.target.value)} className={`${input} mt-1`}>
@@ -36,7 +50,7 @@ export function GoalForm() {
         <div className="grid grid-cols-3 gap-2">
           <label className="text-xs text-muted">
             Sport
-            <select name="sport" className={`${input} mt-1`}>
+            <select name="sport" defaultValue={preset?.sport ?? "all"} className={`${input} mt-1`}>
               <option value="all">All</option>
               <option value="run">Run</option>
               <option value="ride">Ride</option>
@@ -52,7 +66,7 @@ export function GoalForm() {
           </label>
           <label className="text-xs text-muted">
             Per
-            <select name="period" className={`${input} mt-1`}>
+            <select name="period" defaultValue={preset?.period ?? "week"} className={`${input} mt-1`}>
               <option value="week">Week</option>
               <option value="month">Month</option>
               <option value="year">Year</option>
@@ -64,7 +78,7 @@ export function GoalForm() {
       {kind === "power_best" && (
         <label className="block text-xs text-muted">
           Duration
-          <select name="duration_s" defaultValue="1200" className={`${input} mt-1`}>
+          <select name="duration_s" defaultValue={String(preset?.duration_s ?? 1200)} className={`${input} mt-1`}>
             <option value="5">5 s</option>
             <option value="60">1 min</option>
             <option value="300">5 min</option>
@@ -77,7 +91,7 @@ export function GoalForm() {
       <div className="grid grid-cols-2 gap-2">
         <label className="text-xs text-muted">
           Target ({unit})
-          <input name="target" type="number" step="any" min="0" required inputMode="decimal" className={`${input} mt-1`} />
+          <input name="target" type="number" step="any" min="0" required inputMode="decimal" defaultValue={preset?.target} className={`${input} mt-1`} />
         </label>
         <label className="text-xs text-muted">
           Deadline (optional)
@@ -91,8 +105,8 @@ export function GoalForm() {
       </label>
 
       <div className="flex gap-2">
-        <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Save goal</button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-xl px-4 py-2 text-sm text-ink-2">
+        <button className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark">Save goal</button>
+        <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-4 py-2 text-sm text-ink-2">
           Cancel
         </button>
       </div>

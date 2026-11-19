@@ -1,109 +1,142 @@
 @import "tailwindcss";
 
-/* ---- Design tokens (light) ---- */
+/* Waymarked Trail. Light only: used outdoors and by daylight. */
 :root {
   color-scheme: light;
-  --page: #f4f4f1;
-  --surface: #fcfcfb;
-  --surface-2: #f0efec;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
-  --accent: #eb6834;
-  --accent-ink: #ffffff;
 
-  /* Categorical, fixed order: ride, run, strength, other, … */
-  --s1: #2a78d6;
-  --s2: #eb6834;
-  --s3: #1baf7a;
-  --s4: #eda100;
-  --s7: #6250d6;
+  /* Ground and plates */
+  --rock: #e7ebe8;        /* granite ground */
+  --rock-2: #dde3e0;      /* pressed / track */
+  --plate: #ffffff;
+  --border: #c9d2cf;
+  --hairline: #e1e6e4;
 
-  /* Ordinal ramp for zones Z1..Z7 (blue, light→dark) */
-  --z1: #86b6ef;
-  --z2: #5598e7;
-  --z3: #2a78d6;
-  --z4: #256abf;
-  --z5: #1c5cab;
-  --z6: #184f95;
-  --z7: #104281;
+  /* Ink (tinted from the teal, never neutral grey) */
+  --ink: #14211f;
+  --ink-2: #44575a;
+  --muted: #5f7270;
 
-  --good: #0ca30c;
-  --good-ink: #006300;
-  --warning: #fab219;
-  --critical: #d03b3b;
-}
+  /* Brand */
+  --teal: #016c66;        /* shell */
+  --teal-dark: #014f4b;   /* signpost arms */
+  --teal-ink: #e6f2f0;    /* text on teal */
+  --rust: #a54f16;        /* painted mark: next / now */
+  --post: #6b4a2e;        /* signpost wood */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --surface-2: #242423;
-    --ink: #f0efec;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.1);
-    --accent: #d95926;
+  /* Data: sports (validated: CVD-safe, ≥3:1 on white) */
+  --s-ride: #008c83;
+  --s-run: #a54f16;
+  --s-strength: #6a5acd;
+  --s-other: #b8860b;
 
-    --s1: #3987e5;
-    --s2: #d95926;
-    --s3: #199e70;
-    --s4: #c98500;
-    --s7: #9085e9;
+  /* Data: fitness model */
+  --fitness: #008c83;
+  --fatigue: #44575a; /* ink tone: rust is reserved for next/now and running */
+  --form: #6a5acd;
 
-    --z1: #cde2fb;
-    --z2: #9ec5f4;
-    --z3: #6da7ec;
-    --z4: #3987e5;
-    --z5: #2a78d6;
-    --z6: #256abf;
-    --z7: #1c5cab;
+  /* Ordinal zone ramp Z1→Z7 (teal, light→dark) */
+  --z1: #9fd3cd;
+  --z2: #6dbdb5;
+  --z3: #3ea59c;
+  --z4: #008c83;
+  --z5: #01756e;
+  --z6: #015e59;
+  --z7: #014744;
 
-    --good-ink: #0ca30c;
-  }
+  /* DNT trail grades (form) */
+  --grade-green: #2e7d32;
+  --grade-blue: #1f5fa8;
+  --grade-red: #b3261e;
+  --grade-black: #1b1b1b;
+
+  --good: #2e7d32;
+  --warning: #b8860b;
+  --critical: #b3261e;
 }
 
 @theme inline {
-  --color-page: var(--page);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
+  --color-rock: var(--rock);
+  --color-rock-2: var(--rock-2);
+  --color-plate: var(--plate);
+  --color-line: var(--border);
+  --color-hairline: var(--hairline);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
-  --color-grid: var(--grid);
-  --color-line: var(--border);
-  --color-accent: var(--accent);
-  --color-good: var(--good-ink);
-  --color-warn: var(--warning);
+  --color-teal: var(--teal);
+  --color-teal-dark: var(--teal-dark);
+  --color-teal-ink: var(--teal-ink);
+  --color-rust: var(--rust);
+  --color-good: var(--good);
   --color-critical: var(--critical);
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+
+  /* Strict scale: 12 label · 15 body · 22 heading · 30 numerals */
+  --text-xs: 12px;
+  --text-xs--line-height: 1.35;
+  --text-sm: 15px;
+  --text-sm--line-height: 1.45;
+  --text-base: 15px;
+  --text-base--line-height: 1.45;
+  --text-lg: 22px;
+  --text-lg--line-height: 1.15;
+  --text-xl: 22px;
+  --text-xl--line-height: 1.15;
+  --text-2xl: 30px;
+  --text-2xl--line-height: 1.05;
 }
 
 html,
 body {
-  background: var(--page);
+  background: var(--rock);
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+  overflow-x: clip; /* page bands bleed to the viewport edge */
 }
 
-.tabular {
+/* Labels: narrow uppercase, the signpost lettering */
+.label {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 650;
+  font-stretch: 78%;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.num {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
-/* Recharts: recessive chrome */
-.recharts-cartesian-axis-tick-value {
-  fill: var(--muted);
-  font-size: 11px;
+/* Browser surfaces carry the world too */
+::selection {
+  background: color-mix(in oklab, var(--teal) 25%, white);
+  color: var(--ink);
 }
+:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input,
+textarea,
+select {
+  caret-color: var(--rust);
+  accent-color: var(--teal);
+}
+a {
+  text-underline-offset: 3px;
+}
+* {
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Recharts chrome */
 .recharts-surface:focus,
-.recharts-wrapper:focus,
-.recharts-sector:focus {
+.recharts-wrapper:focus {
   outline: none;
 }

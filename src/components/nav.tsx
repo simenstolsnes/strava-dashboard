@@ -15,19 +15,20 @@ export function BottomNav() {
   const path = usePathname();
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-plate"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto flex max-w-3xl">
+      <ul className="mx-auto flex max-w-6xl">
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
           return (
             <li key={t.href} className="flex-1">
               <Link
                 href={t.href}
-                className={`flex flex-col items-center gap-0.5 py-2 text-[11px] ${active ? "text-accent" : "text-muted"}`}
+                className={`relative flex flex-col items-center gap-1 pb-2 pt-2.5 text-xs font-semibold ${active ? "text-teal" : "text-muted hover:text-ink-2"}`}
                 aria-current={active ? "page" : undefined}
               >
+                {active && <span className="absolute top-0 h-[3px] w-8 rounded-b bg-rust" aria-hidden />}
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d={t.icon} />
                 </svg>

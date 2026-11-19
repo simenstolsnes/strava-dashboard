@@ -9,6 +9,7 @@ import {
   type Zone,
 } from "./metrics";
 import { addDays, daysBetween, monthStart, today, weekStart, yearStart } from "./time";
+import { suggest } from "./guidance";
 
 // ---------- Types ----------
 
@@ -251,10 +252,34 @@ export async function getOverview() {
   const lastHard = acts.find((a) => (a.suffer_score ?? 0) >= 45 || (tssOf(a, ftp) ?? 0) >= 70);
   const sinceHard = lastHard ? daysBetween(day(lastHard), t) : null;
 
+  // 7-day projection if you rest (an estimate, drawn dashed)
+  const last = series.at(-1);
+  const chart: Array<{ date: string; fitness?: number; fatigue?: number; fitnessRest?: number; fatigueRest?: number }> =
+    series.slice(-120).map((p) => ({ date: p.date, fitness: p.fitness, fatigue: p.fatigue }));
+  if (last) {
+    chart[chart.length - 1] = { ...chart[chart.length - 1], fitnessRest: last.fitness, fatigueRest: last.fatigue };
+    let ctl = last.fitness;
+    let atl = last.fatigue;
+    for (let i = 1; i <= 7; i++) {
+      ctl -= ctl / 42;
+      atl -= atl / 7;
+      chart.push({ date: addDays(t, i), fitnessRest: +ctl.toFixed(1), fatigueRest: +atl.toFixed(1) });
+    }
+  }
+
+  const latest = acts[0];
+  const justFinished =
+    latest && Date.now() - new Date(latest.start_date).getTime() - latest.elapsed_time * 1000 < 12 * 3600 * 1000
+      ? latest
+      : null;
+
   return {
-    now: series.at(-1) ?? null,
+    now: last ?? null,
     weekAgo: series.at(-8) ?? null,
     series: series.slice(-180),
+    chart,
+    suggestion: last ? suggest(acts, last.form, sinceHard, t) : null,
+    justFinished,
     weekly,
     thisWeek: current,
     avg4: { load: avg("load"), time: avg("time"), distance: avg("distance"), count: avg("count") },
@@ -387,7 +412,15 @@ export type Goal = {
   created_at: string;
 };
 
-export type GoalProgress = Goal & { current: number; unit: string; pct: number; expectedPct: number | null; note: string };
+export type GoalProgress = Goal & {
+  current: number;
+  unit: string;
+  pct: number;
+  expectedPct: number | null;
+  note: string;
+  /** Short "distance left" text for the signpost arm */
+  left: string;
+};
 
 export async function getGoals(): Promise<GoalProgress[]> {
   const goals = check(await db().from("goals").select("*").order("created_at")) as Goal[];
@@ -437,8 +470,17 @@ export async function getGoals(): Promise<GoalProgress[]> {
       const gone = daysBetween(g.created_at.slice(0, 10), t);
       note += ` · ${Math.max(0, total - gone)} days left`;
     }
+    const remaining = Math.max(0, g.target - current);
+    const fmtLeft = remaining >= 10 ? Math.round(remaining) : Math.round(remaining * 10) / 10;
+    const left =
+      current >= g.target
+        ? "Reached"
+        : g.kind === "volume"
+          ? `${fmtLeft} ${unit} left this ${g.period}`
+          : `${fmtLeft}${unit ? ` ${unit}` : ""} to go`;
     return {
       ...g,
+      left,
       current: Math.round(current * 10) / 10,
       unit,
       pct: Math.min(100, (current / g.target) * 100),

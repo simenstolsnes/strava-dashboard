@@ -1,0 +1,751 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-19T20:18:59.813Z",
+  "title": "Design System: Training",
+  "extensions": {
+    "colorMeta": {
+      "granite-ground": {
+        "role": "neutral",
+        "displayName": "Granite Ground",
+        "canonical": "#e7ebe8",
+        "tonalRamp": [
+          "#454746",
+          "#747674",
+          "#a2a5a2",
+          "#cbcfcc",
+          "#ecefed",
+          "#f2f4f2",
+          "#f8f9f8",
+          "#fdfdfd"
+        ]
+      },
+      "pressed-granite": {
+        "role": "neutral",
+        "displayName": "Pressed Granite",
+        "canonical": "#dde3e0",
+        "tonalRamp": [
+          "#424443",
+          "#6f7270",
+          "#9b9f9d",
+          "#c2c8c5",
+          "#e4e9e6",
+          "#ecf0ee",
+          "#f5f7f6",
+          "#fcfcfc"
+        ]
+      },
+      "white-plate": {
+        "role": "neutral",
+        "displayName": "White Plate",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#4d4d4d",
+          "#808080",
+          "#b3b3b3",
+          "#e0e0e0",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "rock-border": {
+        "role": "neutral",
+        "displayName": "Rock Border",
+        "canonical": "#c9d2cf",
+        "tonalRamp": [
+          "#3c3f3e",
+          "#656968",
+          "#8d9391",
+          "#b1b9b6",
+          "#d4dbd9",
+          "#e1e6e5",
+          "#eff2f1",
+          "#fafbfa"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e1e6e4",
+        "tonalRamp": [
+          "#444544",
+          "#717372",
+          "#9ea1a0",
+          "#c6cac9",
+          "#e7ebe9",
+          "#eff1f0",
+          "#f6f8f7",
+          "#fcfdfc"
+        ]
+      },
+      "trail-ink": {
+        "role": "neutral",
+        "displayName": "Trail Ink",
+        "canonical": "#14211f",
+        "tonalRamp": [
+          "#060a09",
+          "#0a1110",
+          "#0e1716",
+          "#121d1b",
+          "#434d4c",
+          "#7e8584",
+          "#b9bcbc",
+          "#e8e9e9"
+        ]
+      },
+      "slate-ink": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "canonical": "#44575a",
+        "tonalRamp": [
+          "#141a1b",
+          "#222c2d",
+          "#303d3f",
+          "#3c4d4f",
+          "#69797b",
+          "#98a3a4",
+          "#c7cdce",
+          "#eceeef"
+        ]
+      },
+      "lichen-muted": {
+        "role": "neutral",
+        "displayName": "Lichen Muted",
+        "canonical": "#5f7270",
+        "tonalRamp": [
+          "#1d2222",
+          "#303938",
+          "#43504e",
+          "#546463",
+          "#7f8e8d",
+          "#a7b1b0",
+          "#cfd5d4",
+          "#eff1f1"
+        ]
+      },
+      "shell-teal": {
+        "role": "primary",
+        "displayName": "Shell Teal",
+        "canonical": "#016c66",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "signpost-teal": {
+        "role": "primary",
+        "displayName": "Signpost Teal",
+        "canonical": "#014f4b",
+        "tonalRamp": [
+          "#001817",
+          "#012826",
+          "#013735",
+          "#014642",
+          "#34726f",
+          "#739e9c",
+          "#b3cac9",
+          "#e6eded"
+        ]
+      },
+      "teal-mist": {
+        "role": "primary",
+        "displayName": "Teal Mist",
+        "canonical": "#e6f2f0",
+        "tonalRamp": [
+          "#454948",
+          "#737978",
+          "#a1a9a8",
+          "#cad5d3",
+          "#ebf5f3",
+          "#f1f8f7",
+          "#f8fbfb",
+          "#fdfefe"
+        ]
+      },
+      "painted-rust": {
+        "role": "secondary",
+        "displayName": "Painted Rust",
+        "canonical": "#a54f16",
+        "tonalRamp": [
+          "#321807",
+          "#53280b",
+          "#73370f",
+          "#914613",
+          "#b77245",
+          "#ce9e7f",
+          "#e4cab9",
+          "#f6ede8"
+        ]
+      },
+      "post-wood": {
+        "role": "secondary",
+        "displayName": "Post Wood",
+        "canonical": "#6b4a2e",
+        "tonalRamp": [
+          "#20160e",
+          "#362517",
+          "#4b3420",
+          "#5e4128",
+          "#896e58",
+          "#ae9b8c",
+          "#d3c9c0",
+          "#f0edea"
+        ]
+      },
+      "sport-ride": {
+        "role": "data",
+        "displayName": "Ride",
+        "canonical": "#008c83",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "sport-run": {
+        "role": "data",
+        "displayName": "Run",
+        "canonical": "#a54f16",
+        "tonalRamp": [
+          "#321807",
+          "#53280b",
+          "#73370f",
+          "#914613",
+          "#b77245",
+          "#ce9e7f",
+          "#e4cab9",
+          "#f6ede8"
+        ]
+      },
+      "sport-strength": {
+        "role": "data",
+        "displayName": "Strength & HIIT",
+        "canonical": "#6a5acd",
+        "tonalRamp": [
+          "#201b3e",
+          "#352d67",
+          "#4a3f90",
+          "#5d4fb4",
+          "#887bd7",
+          "#ada4e4",
+          "#d2cef0",
+          "#f0effa"
+        ]
+      },
+      "sport-other": {
+        "role": "data",
+        "displayName": "Other sport",
+        "canonical": "#b8860b",
+        "tonalRamp": [
+          "#372803",
+          "#5c4306",
+          "#815e08",
+          "#a2760a",
+          "#c69e3c",
+          "#d8bc79",
+          "#eadbb6",
+          "#f8f3e7"
+        ]
+      },
+      "fitness": {
+        "role": "data",
+        "displayName": "Fitness",
+        "canonical": "#008c83",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "fatigue": {
+        "role": "data",
+        "displayName": "Fatigue (ink tone)",
+        "canonical": "#44575a",
+        "tonalRamp": [
+          "#141a1b",
+          "#222c2d",
+          "#303d3f",
+          "#3c4d4f",
+          "#69797b",
+          "#98a3a4",
+          "#c7cdce",
+          "#eceeef"
+        ]
+      },
+      "form": {
+        "role": "data",
+        "displayName": "Form",
+        "canonical": "#6a5acd",
+        "tonalRamp": [
+          "#201b3e",
+          "#352d67",
+          "#4a3f90",
+          "#5d4fb4",
+          "#887bd7",
+          "#ada4e4",
+          "#d2cef0",
+          "#f0effa"
+        ]
+      },
+      "zone-1": {
+        "role": "data",
+        "displayName": "Zone 1",
+        "canonical": "#9fd3cd",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "zone-2": {
+        "role": "data",
+        "displayName": "Zone 2",
+        "canonical": "#6dbdb5",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "zone-3": {
+        "role": "data",
+        "displayName": "Zone 3",
+        "canonical": "#3ea59c",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "zone-4": {
+        "role": "data",
+        "displayName": "Zone 4",
+        "canonical": "#008c83",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "zone-5": {
+        "role": "data",
+        "displayName": "Zone 5",
+        "canonical": "#01756e",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "zone-6": {
+        "role": "data",
+        "displayName": "Zone 6",
+        "canonical": "#015e59",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "zone-7": {
+        "role": "data",
+        "displayName": "Zone 7",
+        "canonical": "#014744",
+        "tonalRamp": [
+          "#014744",
+          "#015e59",
+          "#01756e",
+          "#008c83",
+          "#3ea59c",
+          "#6dbdb5",
+          "#9fd3cd",
+          "#e6f2f0"
+        ]
+      },
+      "grade-green": {
+        "role": "data",
+        "displayName": "Grade Green",
+        "canonical": "#2e7d32",
+        "tonalRamp": [
+          "#0e260f",
+          "#173f19",
+          "#205823",
+          "#286e2c",
+          "#58975b",
+          "#8cb88e",
+          "#c0d8c2",
+          "#eaf2eb"
+        ]
+      },
+      "grade-blue": {
+        "role": "data",
+        "displayName": "Grade Blue",
+        "canonical": "#1f5fa8",
+        "tonalRamp": [
+          "#091d32",
+          "#103054",
+          "#164376",
+          "#1b5494",
+          "#4c7fb9",
+          "#84a7cf",
+          "#bccfe5",
+          "#e9eff6"
+        ]
+      },
+      "grade-red": {
+        "role": "data",
+        "displayName": "Grade Red",
+        "canonical": "#b3261e",
+        "tonalRamp": [
+          "#360b09",
+          "#5a130f",
+          "#7d1b15",
+          "#9e211a",
+          "#c2514b",
+          "#d58883",
+          "#e8bebc",
+          "#f7e9e9"
+        ]
+      },
+      "grade-black": {
+        "role": "data",
+        "displayName": "Grade Black",
+        "canonical": "#1b1b1b",
+        "tonalRamp": [
+          "#080808",
+          "#0e0e0e",
+          "#131313",
+          "#181818",
+          "#494949",
+          "#828282",
+          "#bbbbbb",
+          "#e8e8e8"
+        ]
+      },
+      "good": {
+        "role": "status",
+        "displayName": "Good",
+        "canonical": "#2e7d32",
+        "tonalRamp": [
+          "#0e260f",
+          "#173f19",
+          "#205823",
+          "#286e2c",
+          "#58975b",
+          "#8cb88e",
+          "#c0d8c2",
+          "#eaf2eb"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning",
+        "canonical": "#b8860b",
+        "tonalRamp": [
+          "#372803",
+          "#5c4306",
+          "#815e08",
+          "#a2760a",
+          "#c69e3c",
+          "#d8bc79",
+          "#eadbb6",
+          "#f8f3e7"
+        ]
+      },
+      "critical": {
+        "role": "status",
+        "displayName": "Critical",
+        "canonical": "#b3261e",
+        "tonalRamp": [
+          "#360b09",
+          "#5a130f",
+          "#7d1b15",
+          "#9e211a",
+          "#c2514b",
+          "#d58883",
+          "#e8bebc",
+          "#f7e9e9"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Page titles in the teal band, stat values, goal current values. Tabular."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Signpost arm titles, the form grade line, the just-finished session name."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Plate titles, goal names, the shell wordmark."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, row names (500), buttons and links (600)."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Subtitles, units, deltas, hints, legends, axis ticks, nav labels, tooltips."
+      },
+      "label": {
+        "displayName": "Sign Lettering",
+        "purpose": "Narrow uppercase label naming a value or a sign; Archivo wdth 78 (font-stretch: 78%)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "tooltip-float",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Chart tooltips only. Everything else is flat."
+      },
+      {
+        "name": "grade-ring",
+        "value": "0 0 0 3px #fff, 0 0 0 4px var(--border)",
+        "purpose": "Paint ring around the trail-grade square; not elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "arm-press",
+        "value": "filter brightness(1.1) on :active, transition-[filter] 150ms",
+        "purpose": "Signpost arm press feedback."
+      },
+      {
+        "name": "charts-static",
+        "value": "isAnimationActive=false",
+        "purpose": "Charts draw without entry animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Today splits into a sticky 5fr rail and a 7fr detail column."
+      },
+      {
+        "name": "shell-max",
+        "value": "1152px"
+      },
+      {
+        "name": "column-max",
+        "value": "768px"
+      }
+    ],
+    "strokes": [
+      {
+        "name": "estimate-dash",
+        "value": "stroke-dasharray: 5 4",
+        "purpose": "Every estimate or projection; measured stays solid."
+      },
+      {
+        "name": "series-line",
+        "value": "2px",
+        "purpose": "Chart lines; activity streams 1.5px."
+      },
+      {
+        "name": "icon-stroke",
+        "value": "2px, round caps and joins, 24px viewBox",
+        "purpose": "Authored icons share the nav stroke weight."
+      }
+    ],
+    "focus": {
+      "outline": "2px solid var(--rust)",
+      "outlineOffset": "2px",
+      "caret": "var(--rust)",
+      "accent": "var(--teal)",
+      "selection": "color-mix(in oklab, var(--teal) 25%, white)"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Shell-teal fill for the one committing action in a form (Save goal, Save note, Sync now).",
+      "html": "<button class=\"ds-btn-primary\">Save goal</button>",
+      "css": ".ds-btn-primary{background:var(--teal,#016c66);color:#fff;border:0;border-radius:8px;padding:8px 16px;font:600 15px/1.45 Archivo,system-ui,sans-serif;cursor:pointer}.ds-btn-primary:active{filter:brightness(1.1)}.ds-btn-primary:focus-visible{outline:2px solid var(--rust,#a54f16);outline-offset:2px}.ds-btn-primary:disabled{opacity:.6}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Plate-coloured button with a rock border for neutral actions (Save, Show more, Log out in critical).",
+      "html": "<button class=\"ds-btn-secondary\">Show more</button>",
+      "css": ".ds-btn-secondary{background:var(--plate,#fff);color:var(--ink,#14211f);border:1px solid var(--border,#c9d2cf);border-radius:8px;padding:8px 16px;font:500 15px/1.45 Archivo,system-ui,sans-serif;cursor:pointer}.ds-btn-secondary:hover{border-color:var(--teal,#016c66)}.ds-btn-secondary:focus-visible{outline:2px solid var(--rust,#a54f16);outline-offset:2px}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Granite well inside a white plate, 12px muted label above.",
+      "html": "<label class=\"ds-field\">Target (km)<input class=\"ds-input\" type=\"number\" value=\"40\"></label>",
+      "css": ".ds-field{display:block;font:400 12px/1.35 Archivo,system-ui,sans-serif;color:var(--muted,#5f7270)}.ds-input{display:block;width:100%;margin-top:4px;background:var(--rock,#e7ebe8);border:1px solid var(--border,#c9d2cf);border-radius:8px;padding:8px 12px;font:400 15px/1.45 Archivo,system-ui,sans-serif;color:var(--ink,#14211f);caret-color:var(--rust,#a54f16);accent-color:var(--teal,#016c66)}.ds-input:focus-visible{outline:2px solid var(--rust,#a54f16);outline-offset:2px}"
+    },
+    {
+      "name": "Sport Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Round filter chips; the active one fills shell teal.",
+      "html": "<div class=\"ds-chips\"><a class=\"ds-chip ds-chip-on\">All</a><a class=\"ds-chip\">Ride</a><a class=\"ds-chip\">Run</a></div>",
+      "css": ".ds-chips{display:flex;gap:8px}.ds-chip{border:1px solid var(--border,#c9d2cf);background:var(--plate,#fff);color:var(--ink-2,#44575a);border-radius:9999px;padding:6px 12px;font:400 15px/1.45 Archivo,system-ui,sans-serif;cursor:pointer}.ds-chip:hover{border-color:var(--teal,#016c66)}.ds-chip-on{background:var(--teal,#016c66);border-color:var(--teal,#016c66);color:#fff;font-weight:600}"
+    },
+    {
+      "name": "Plate",
+      "kind": "card",
+      "refersTo": "plate",
+      "description": "White plate on granite ground: the universal container, flat, 1px rock border.",
+      "html": "<section class=\"ds-plate\"><h2 class=\"ds-plate-t\">Weekly hours</h2><p class=\"ds-plate-s\">This week 84 km in 5 sessions</p><div class=\"ds-stat\"><p class=\"ds-label\">Fitness</p><p class=\"ds-num\">62</p></div></section>",
+      "css": ".ds-plate{background:var(--plate,#fff);border:1px solid var(--border,#c9d2cf);border-radius:10px;padding:16px;color:var(--ink,#14211f);font-family:Archivo,system-ui,sans-serif;}.ds-plate-t{margin:0;font:700 15px/1.45 Archivo,system-ui,sans-serif}.ds-plate-s{margin:2px 0 12px;font:400 12px/1.35 Archivo,system-ui,sans-serif;color:var(--muted,#5f7270)}.ds-label{margin:0;font-size:12px;line-height:1.2;font-weight:650;font-stretch:78%;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5f7270);}.ds-num{margin:4px 0 0;font:800 30px/1.05 Archivo,system-ui,sans-serif;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Bottom Tab Bar",
+      "kind": "nav",
+      "refersTo": "bottom-nav",
+      "description": "Fixed white tab bar; active tab is teal with a rust tick hanging from the top edge.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-tab ds-tab-on\"><span class=\"ds-tick\"></span><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10\"/></svg>Today</a><a class=\"ds-tab\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 2L4 14h7l-1 8 9-12h-7l1-8z\"/></svg>Power</a><a class=\"ds-tab\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 6h16M4 12h16M4 18h10\"/></svg>Activities</a></nav>",
+      "css": ".ds-nav{display:flex;background:var(--plate,#fff);border-top:1px solid var(--border,#c9d2cf);font-family:Archivo,system-ui,sans-serif}.ds-tab{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0 8px;font:600 12px/1.35 Archivo,system-ui,sans-serif;color:var(--muted,#5f7270);cursor:pointer}.ds-tab:hover{color:var(--ink-2,#44575a)}.ds-tab-on{color:var(--teal,#016c66)}.ds-tick{position:absolute;top:0;width:32px;height:3px;border-radius:0 0 4px 4px;background:var(--rust,#a54f16)}"
+    },
+    {
+      "name": "Signpost",
+      "kind": "custom",
+      "refersTo": "signpost-arm-next",
+      "description": "Signature: guidance and goals as arrow-cut arms on a wooden post. Rust NEXT on top, teal goals, green done, outlined example.",
+      "html": "<div class=\"ds-post\" role=\"list\"><div class=\"ds-wood\"></div><a class=\"ds-arm\" style=\"background:var(--rust,#a54f16)\"><span class=\"ds-arm-l\">Next</span><span class=\"ds-arm-t\">Easy ride 60 min</span><span class=\"ds-arm-m\">Z2</span></a><a class=\"ds-arm\" style=\"background:var(--teal-dark,#014f4b)\"><span class=\"ds-arm-l\">Goal</span><span class=\"ds-arm-t\">FTP 280 W</span><span class=\"ds-arm-m\">12 W left</span></a><a class=\"ds-arm\" style=\"background:var(--good,#2e7d32)\"><span class=\"ds-arm-l\">Done</span><span class=\"ds-arm-t\">Run 30 km a week</span><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\"/></svg></a><div class=\"ds-arm-o\"><a class=\"ds-arm ds-arm-ex\"><span class=\"ds-arm-l\">Try</span><span class=\"ds-arm-t\">20 min at 260 W</span><span class=\"ds-arm-m\">best 248 W</span></a></div></div>",
+      "css": ".ds-post{position:relative;padding-left:20px;font-family:Archivo,system-ui,sans-serif}.ds-wood{position:absolute;left:6px;top:0;bottom:0;width:8px;border-radius:4px;background:var(--post,#6b4a2e)}.ds-arm,.ds-arm-o{margin-bottom:8px}.ds-arm{position:relative;display:flex;align-items:center;gap:12px;min-height:58px;box-sizing:border-box;padding:10px 32px 10px 14px;color:#fff;clip-path:polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%);cursor:pointer;transition:filter .15s}.ds-arm:active{filter:brightness(1.1)}.ds-arm:focus-visible{outline:2px solid var(--rust,#a54f16);outline-offset:2px}.ds-arm-l{width:44px;flex-shrink:0;font-size:12px;line-height:1.2;font-weight:650;font-stretch:78%;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5f7270);color:rgba(255,255,255,.82)}.ds-arm-t{flex:1;min-width:0;font:800 22px/1.15 Archivo,system-ui,sans-serif}.ds-arm-m{flex-shrink:0;font:600 12px/1.35 Archivo,system-ui,sans-serif;font-variant-numeric:tabular-nums;opacity:.9}.ds-arm-o{padding:2px;background:var(--teal-dark,#014f4b);clip-path:polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)}.ds-arm-o .ds-arm{margin:0}.ds-arm-ex{background:var(--plate,#fff);color:var(--teal-dark,#014f4b)}.ds-arm-ex .ds-arm-l{color:var(--muted,#5f7270)}.ds-arm-ex .ds-arm-m{color:var(--ink-2,#44575a);opacity:1}"
+    },
+    {
+      "name": "Form Grade",
+      "kind": "custom",
+      "refersTo": "grade-mark",
+      "description": "DNT trail-grade square painted beside the form value and one-sentence reading.",
+      "html": "<section class=\"ds-grade\"><span class=\"ds-sq\"></span><div><p class=\"ds-g-t\">Form <span class=\"ds-n\">-14</span><span class=\"ds-g-z\"> · Optimal</span></p><p class=\"ds-g-x\">Productive training load. Keep the week as planned.</p></div></section>",
+      "css": ".ds-grade{display:flex;align-items:center;gap:16px;background:var(--plate,#fff);border:1px solid var(--border,#c9d2cf);border-radius:10px;padding:16px;color:var(--ink,#14211f);font-family:Archivo,system-ui,sans-serif;}.ds-sq{width:34px;height:34px;flex-shrink:0;border-radius:3px;background:var(--grade-green,#2e7d32);box-shadow:0 0 0 3px #fff,0 0 0 4px var(--border,#c9d2cf)}.ds-g-t{margin:0;font:800 22px/1.15 Archivo,system-ui,sans-serif}.ds-n{font-variant-numeric:tabular-nums}.ds-g-z{color:var(--ink-2,#44575a)}.ds-g-x{margin:0;font:400 15px/1.45 Archivo,system-ui,sans-serif;color:var(--ink-2,#44575a)}"
+    },
+    {
+      "name": "Month Guide Header",
+      "kind": "custom",
+      "refersTo": "month-guide-header",
+      "description": "Sticky granite header naming the month span in activity lists, pinned under the shell bar.",
+      "html": "<div class=\"ds-list\"><header class=\"ds-mh\"><h2 class=\"ds-mh-t\">November 2026</h2><p class=\"ds-mh-c\">14 sessions · 11.2 h</p></header><div class=\"ds-row\"><span class=\"ds-dot\"></span><div><p class=\"ds-row-n\">Morning ride</p><p class=\"ds-row-f\">42.1 km · 1:24 · 212 W NP</p></div></div></div>",
+      "css": ".ds-list{background:var(--plate,#fff);border:1px solid var(--border,#c9d2cf);border-radius:10px;overflow:clip;font-family:Archivo,system-ui,sans-serif}.ds-mh{position:sticky;top:48px;display:flex;align-items:baseline;justify-content:space-between;padding:8px 16px;background:var(--rock,#e7ebe8);border-bottom:1px solid var(--border,#c9d2cf)}.ds-mh-t{margin:0;font-size:12px;line-height:1.2;font-weight:650;font-stretch:78%;letter-spacing:.08em;text-transform:uppercase;color:var(--ink,#14211f)}.ds-mh-c{margin:0;font:400 12px/1.35 Archivo,system-ui,sans-serif;color:var(--ink-2,#44575a);font-variant-numeric:tabular-nums}.ds-row{display:flex;align-items:center;gap:12px;padding:10px 16px}.ds-row:hover{background:rgba(231,235,232,.6)}.ds-dot{width:10px;height:10px;border-radius:50%;background:var(--s-ride,#008c83);flex-shrink:0}.ds-row-n{margin:0;font:500 15px/1.45 Archivo,system-ui,sans-serif;color:var(--ink,#14211f)}.ds-row-f{margin:0;font:400 12px/1.35 Archivo,system-ui,sans-serif;color:var(--ink-2,#44575a);font-variant-numeric:tabular-nums}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Waymarked Trail",
+    "overview": "Training is read the way a Norwegian mountain trail is read: you stand at a post, the arms tell you where the next sensible stretch goes and how far each destination is, and painted marks on the rock tell you the grade underfoot. The app is a granite-grey ground with white plates resting on it, a deep-teal shell bar overhead, a wooden signpost with routed arms for guidance and goals, and burnt-orange paint used only for the mark that means \"next\" or \"now\".\n\nDensity is moderate and phone-first: one column of plates on a phone held outdoors in daylight, a two-column rail-and-detail layout on a laptop. The system is light only by design; contrast is tuned for sunlight, not for a dark room. Type is a single family, Archivo, used on its width axis: full-width for reading and numerals, narrowed and uppercased for the sign lettering of labels. Rank comes from weight and case on a strict four-size scale, never from extra sizes.\n\nData is honest about its provenance. Measured values draw solid; anything estimated or projected draws dashed, in charts, legends and tooltip keys alike. The category default of a stat-tile grid with a chart under it is rejected: the first thing on screen is the signpost, not a dashboard of tiles.",
+    "keyCharacteristics": [
+      "Granite ground, white plates with a 1px rock border, teal shell bar that continues into each page's title band.",
+      "The signpost (wood post, arrow-cut arms) is the signature component for guidance and goals.",
+      "Rust is a painted mark, reserved for next/now and the run sport.",
+      "DNT trail-grade squares (green, blue, red, black) encode form.",
+      "One family on its width axis; strict 12/15/22/30 scale; tabular numerals everywhere numbers appear.",
+      "Solid = measured, dashed = estimate.",
+      "Flat: depth comes from tone (ground vs plate), not shadow."
+    ],
+    "rules": [
+      {
+        "name": "The Painted Mark Rule",
+        "body": "Rust means \"next\" or \"now\" (and running, in sport data). It never decorates, never marks a heading, and never colours a non-run data series. Fatigue and comparison series take slate ink instead.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plates-Only Muted Rule",
+        "body": "Lichen Muted is a plate colour: it holds 5.1:1 on white but only 4.2:1 on granite. Small text on the granite ground uses Slate Ink or Trail Ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Ramp Rule",
+        "body": "Ordered quantities (zones) use the single teal ramp; categorical colour is for sports only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Four Sizes Rule",
+        "body": "Only 12, 15, 22 and 30px exist. Rank is made with weight (400 to 800), case and width, never with a fifth size.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Numeral Rule",
+        "body": "Every number that can change sits in tabular figures (`.num`). Units trail the numeral at 12px semibold in slate ink.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sign Lettering Rule",
+        "body": "The narrow uppercase label names the value or sign directly beneath or beside it. It is not a decorative introducer above headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Plate-on-Rock Rule",
+        "body": "Separation is ground versus plate plus a 1px border. Do not add shadows to plates, rows or buttons.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do put the signpost first on Today: a rust NEXT arm on top, then teal goal arms with what is left.",
+      "Do draw measured data solid and every estimate or projection dashed, including the legend and tooltip keys.",
+      "Do set every changing number in tabular figures, with its unit at 12px semibold slate ink.",
+      "Do separate content with white plates (10px radius, 1px rock border) on the granite ground.",
+      "Do use the narrow uppercase label (12px, 650, 0.08em, 78% width) to name a value or a sign.",
+      "Do carry the world into browser surfaces: rust focus ring and caret, teal selection and native accents, teal theme colour.",
+      "Do colour zones with the single teal ramp and sports with the validated four-colour sport palette."
+    ],
+    "donts": [
+      "Don't use painted rust for anything but next/now marks and the run sport; fatigue and comparison series use slate ink.",
+      "Don't add a fifth type size; rank with weight, case and width.",
+      "Don't add shadows to plates, rows or buttons; only chart tooltips float.",
+      "Don't ship a dark theme; the use scene is outdoors in daylight.",
+      "Don't set lichen muted small text directly on the granite ground (4.2:1); use slate ink there.",
+      "Don't lay out the first view as a stat-tile grid with a chart under it.",
+      "Don't use the arrow-cut silhouette for anything but signpost arms.",
+      "Don't use a narrow uppercase label as a decorative kicker above a heading."
+    ]
+  }
+}

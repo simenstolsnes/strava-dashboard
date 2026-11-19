@@ -14,7 +14,7 @@ export default async function PowerPage() {
   if (!p.curve.length) {
     return (
       <>
-        <PageTitle>Power</PageTitle>
+        <PageTitle wide>Power</PageTitle>
         <Empty>No rides with a power meter synced yet. Zwift and trainer rides will show up here.</Empty>
       </>
     );
@@ -26,8 +26,9 @@ export default async function PowerPage() {
   const change = best20 && best20Prev ? best20 - best20Prev : null;
 
   return (
-    <div className="space-y-4">
-      <PageTitle sub={`${p.rideCount90} rides with power in the last 90 days`}>Power</PageTitle>
+    <>
+      <PageTitle wide sub={`${p.rideCount90} rides with power in the last 90 days`}>Power</PageTitle>
+      <div className="max-w-3xl space-y-4">
 
       <Card>
         <div className="grid grid-cols-3 gap-3">
@@ -46,32 +47,33 @@ export default async function PowerPage() {
         </div>
       </Card>
 
-      <Card title="Power curve" subtitle="Best average power for each duration">
+      <Card title="Power curve" subtitle="Best average power (W) for each duration">
         <PowerCurveChart data={p.curve} weight={p.weight} />
       </Card>
 
       <Card title="Best efforts, last 90 days">
-        <table className="tabular w-full text-sm">
+        <table className="num w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">
               <th className="pb-2 font-normal">Duration</th>
               <th className="pb-2 font-normal">Power</th>
               <th className="pb-2 font-normal">W/kg</th>
-              <th className="pb-2 font-normal">Activity</th>
+              <th className="w-1/2 pb-2 font-normal">Activity</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {p.keyEfforts.map((e) => (
               <tr key={e.seconds}>
-                <td className="py-2 text-ink-2">{curveLabel(e.seconds)}</td>
-                <td className="py-2 font-semibold text-ink">{e.watts} W</td>
-                <td className="py-2 text-ink-2">{p.weight ? (e.watts / p.weight).toFixed(2) : "–"}</td>
-                <td className="max-w-0 truncate py-2">
+                <td className="py-2 align-top text-ink-2">{curveLabel(e.seconds)}</td>
+                <td className="py-2 align-top font-semibold text-ink">{e.watts} W</td>
+                <td className="py-2 align-top text-ink-2">{p.weight ? (e.watts / p.weight).toFixed(2) : "–"}</td>
+                <td className="py-2 align-top">
                   {e.activity && (
-                    <Link href={`/activities/${e.activity.id}`} className="text-accent">
-                      {shortDate(e.activity.start_date_local)} · {e.activity.name}
+                    <Link href={`/activities/${e.activity.id}`} className="line-clamp-2 font-medium text-teal hover:underline">
+                      {e.activity.name}
                     </Link>
                   )}
+                  {e.activity && <span className="text-xs text-muted">{shortDate(e.activity.start_date_local)}</span>}
                 </td>
               </tr>
             ))}
@@ -79,13 +81,13 @@ export default async function PowerPage() {
         </table>
       </Card>
 
-      <Card title="Monthly bests" subtitle="Are your key durations trending up?">
+      <Card title="Monthly bests" subtitle="Best 1, 5 and 20 min power (W) per month">
         <MonthlyPowerChart data={p.monthly} />
       </Card>
 
       {p.powerZones && ftp && (
         <Card title="Your power zones" subtitle="From Strava">
-          <ul className="tabular space-y-1 text-sm">
+          <ul className="num space-y-1 text-sm">
             {p.powerZones.map((z, i) => (
               <li key={i} className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-sm" style={{ background: `var(--z${i + 1})` }} />
@@ -96,6 +98,7 @@ export default async function PowerPage() {
           </ul>
         </Card>
       )}
-    </div>
+      </div>
+    </>
   );
 }

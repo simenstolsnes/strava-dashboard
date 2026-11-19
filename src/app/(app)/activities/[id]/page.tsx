@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAthlete } from "@/lib/auth";
 import { getActivityDetail, sportGroup } from "@/lib/queries";
-import { Card, PageTitle, Stat, ZoneBars } from "@/components/ui";
+import { Card, Icon, PageTitle, Stat, ZoneBars } from "@/components/ui";
 import { ActivityCurveChart, StreamChart } from "@/components/charts";
 import { duration, km, kmh, longDate, pace } from "@/lib/format";
 import { CURVE_DURATIONS } from "@/lib/metrics";
@@ -9,8 +9,7 @@ import { reprocess, saveNote } from "./actions";
 
 export const metadata = { title: "Activity" };
 
-const FEELINGS = ["😫", "😕", "😐", "🙂", "🤩"];
-const fmtPace = (v: number) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, "0")}`;
+const FEELINGS = ["Rough", "Heavy", "OK", "Good", "Great"];
 
 export default async function ActivityPage({ params }: PageProps<"/activities/[id]">) {
   await requireAthlete();
@@ -33,7 +32,7 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
         time: t,
         heartrate: streams.heartrate?.[i] ?? null,
         watts: streams.watts?.[i] ?? null,
-        speed: v != null ? (isRun ? (v > 1.2 ? 1000 / v : null) : v * 3.6) : null,
+        speed: v != null ? (isRun ? (v > 2 ? 1000 / v : null) : v * 3.6) : null,
         altitude: streams.altitude?.[i] ?? null,
       };
     }) ?? [];
@@ -50,8 +49,9 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
   const resync = reprocess.bind(null, a.id);
 
   return (
-    <div className="space-y-4">
-      <PageTitle sub={`${longDate(a.start_date_local)} · ${a.sport_type.replace(/([a-z])([A-Z])/g, "$1 $2")}`}>{a.name}</PageTitle>
+    <>
+      <PageTitle wide sub={`${longDate(a.start_date_local)} · ${a.sport_type.replace(/([a-z])([A-Z])/g, "$1 $2")}`}>{a.name}</PageTitle>
+      <div className="max-w-3xl space-y-4">
 
       {extra.description && <p className="-mt-2 whitespace-pre-line text-sm text-ink-2">{extra.description}</p>}
 
@@ -62,7 +62,7 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
           {a.distance > 0 && (isRun ? <Stat label="Pace" value={pace(a.average_speed).replace(" /km", "")} unit="/km" /> : <Stat label="Speed" value={kmh(a.average_speed).replace(" km/h", "")} unit="km/h" />)}
           {a.total_elevation_gain > 0 && <Stat label="Elevation" value={Math.round(a.total_elevation_gain)} unit="m" />}
           {a.average_heartrate && <Stat label="Avg HR" value={Math.round(a.average_heartrate)} unit="bpm" hint={a.max_heartrate ? `max ${Math.round(a.max_heartrate)}` : undefined} />}
-          {a.suffer_score != null && <Stat label="Relative Effort" value={Math.round(a.suffer_score)} />}
+          {a.suffer_score != null && <Stat label="Rel. effort" value={Math.round(a.suffer_score)} />}
           {hasPower && <Stat label="Avg power" value={Math.round(a.average_watts ?? 0)} unit="W" hint={extra.max_watts ? `max ${Math.round(extra.max_watts)}` : undefined} />}
           {hasPower && <Stat label="Normalized" value={Math.round(metrics!.normalized_power!)} unit="W" />}
           {intensity && <Stat label="Intensity" value={intensity.toFixed(2)} hint={`FTP ${d.ftp} W`} />}
@@ -89,8 +89,8 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
             )}
             {streams?.velocity && a.distance > 0 && (
               isRun
-                ? <StreamChart data={rows} dataKey="speed" label="Pace" unit="/km" format={(v) => `${fmtPace(v)} /km`} reversed />
-                : <StreamChart data={rows} dataKey="speed" label="Speed" unit="km/h" format={(v) => `${v.toFixed(1)} km/h`} />
+                ? <StreamChart data={rows} dataKey="speed" label="Pace" unit="/km" valueFormat="pace" reversed />
+                : <StreamChart data={rows} dataKey="speed" label="Speed" unit="km/h" valueFormat="decimal" />
             )}
             {streams?.altitude && a.total_elevation_gain > 0 && <StreamChart data={rows} dataKey="altitude" label="Elevation" unit="m" height={90} />}
           </div>
@@ -118,7 +118,7 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
       {extra.laps.length > 1 && (
         <Card title="Laps">
           <div className="-mx-4 overflow-x-auto px-4">
-            <table className="tabular w-full min-w-[420px] text-sm">
+            <table className="num w-full min-w-[420px] text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted">
                   <th className="pb-2 font-normal">#</th>
@@ -151,9 +151,9 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
           <fieldset className="flex gap-2">
             <legend className="sr-only">Feeling</legend>
             {FEELINGS.map((f, i) => (
-              <label key={i} className="cursor-pointer">
+              <label key={i} className="flex-1 cursor-pointer">
                 <input type="radio" name="feeling" value={i + 1} defaultChecked={d.note?.feeling === i + 1} className="peer sr-only" />
-                <span className="block rounded-xl border border-line px-3 py-2 text-xl peer-checked:border-accent peer-checked:bg-surface-2">
+                <span className="block rounded-md border border-line px-2.5 py-2 text-center text-xs font-semibold text-ink-2 peer-checked:border-teal peer-checked:bg-teal peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-rust">
                   {f}
                 </span>
               </label>
@@ -164,20 +164,21 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
             defaultValue={d.note?.text ?? ""}
             rows={3}
             placeholder="Legs, sleep, weather, what you'd change next time…"
-            className="w-full rounded-xl border border-line bg-surface-2 p-3 text-sm text-ink placeholder:text-muted"
+            className="w-full rounded-lg border border-line bg-plate p-3 text-sm text-ink placeholder:text-muted"
           />
-          <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Save note</button>
+          <button className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark">Save note</button>
         </form>
       </Card>
 
       <div className="flex items-center justify-between text-sm">
-        <a href={`https://www.strava.com/activities/${a.id}`} target="_blank" rel="noreferrer" className="font-medium text-accent">
-          View on Strava ↗
+        <a href={`https://www.strava.com/activities/${a.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-teal">
+          View on Strava <Icon name="external" size={14} />
         </a>
         <form action={resync}>
           <button className="text-muted">Re-sync from Strava</button>
         </form>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

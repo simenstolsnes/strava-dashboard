@@ -28,7 +28,7 @@ export function SyncButton() {
       <button
         onClick={run}
         disabled={state === "busy"}
-        className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-dark disabled:opacity-60"
       >
         {state === "busy" ? "Syncing…" : "Sync now"}
       </button>

@@ -15,15 +15,15 @@ export function ActivityRow({ a }: { a: Activity }) {
 
   return (
     <li>
-      <Link href={`/activities/${a.id}`} className="flex items-center gap-3 rounded-lg px-1 py-2.5 active:bg-surface-2">
+      <Link href={`/activities/${a.id}`} className="flex items-center gap-3 rounded-md px-1 py-2.5 hover:bg-rock/60 active:bg-rock">
         <SportDot group={g} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-ink">{a.name}</p>
-          <p className="tabular truncate text-xs text-ink-2">{facts.join(" · ")}</p>
+          <p className="num truncate text-xs text-ink-2">{facts.join(" · ")}</p>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-xs text-muted">{shortDate(a.start_date_local)}</p>
-          {a.suffer_score != null && <p className="tabular text-xs text-ink-2">RE {Math.round(a.suffer_score)}</p>}
+          {a.suffer_score != null && <p className="num text-xs text-ink-2">RE {Math.round(a.suffer_score)}</p>}
         </div>
       </Link>
     </li>
