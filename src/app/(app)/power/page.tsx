@@ -32,14 +32,22 @@ export default async function PowerPage() {
 
       <Card>
         <div className="grid grid-cols-3 gap-3">
-          <Stat label="FTP" value={ftp ?? "–"} unit="W" hint={p.ftp.source} />
+          <Stat
+            label="FTP"
+            value={ftp ?? "–"}
+            unit="W"
+            hint={p.ftp.source}
+            info="Functional Threshold Power: roughly the highest power you can hold for about an hour. It anchors your power zones, Intensity Factor and TSS. Set your own in Settings, otherwise Strava's value or the estimate is used."
+          />
           <Stat
             label="W/kg"
+            info="FTP divided by body weight (from Strava). What decides climbing speed: about 3 W/kg is a strong amateur, 4+ W/kg very fit, 5+ elite."
             value={ftp && p.weight ? (ftp / p.weight).toFixed(2) : "–"}
             hint={p.weight ? `at ${p.weight} kg` : "add weight in Strava"}
           />
           <Stat
             label="eFTP (90 d)"
+            info="Estimated FTP: 95 % of your best 20-minute power in the last 90 days. An estimate only; a proper test or a hard 20-minute effort makes it sharper. The arrow compares your best 20 minutes with the 90 days before."
             value={p.eftp ?? "–"}
             unit="W"
             delta={change !== null ? { text: `${Math.abs(change)} W on 20 min vs prior 90 d`, good: change === 0 ? null : change > 0 } : undefined}
@@ -47,7 +55,11 @@ export default async function PowerPage() {
         </div>
       </Card>
 
-      <Card title="Power curve" subtitle="Best average power (W) for each duration">
+      <Card
+        title="Power curve"
+        subtitle="Best average power (W) for each duration. Tap a point to see which ride set it."
+        info="For every duration from 1 second to 2 hours, the highest average power you held in any single ride. Short durations show sprint power, 5 minutes your VO2max, 20–60 minutes your threshold. Only rides with a power meter (including Zwift and the trainer) count."
+      >
         <PowerCurveChart data={p.curve} weight={p.weight} />
       </Card>
 
@@ -81,7 +93,11 @@ export default async function PowerPage() {
         </table>
       </Card>
 
-      <Card title="Monthly bests" subtitle="Best 1, 5 and 20 min power (W) per month">
+      <Card
+        title="Monthly bests"
+        subtitle="Best 1, 5 and 20 min power (W) per month. Tap a month to see the rides."
+        info="Your best 1-, 5- and 20-minute power for each month. A month without hard efforts dips even if you are fit, so look at peaks across a few months."
+      >
         <MonthlyPowerChart data={p.monthly} />
       </Card>
 

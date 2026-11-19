@@ -110,6 +110,22 @@ export function efficiency(output1Hz: number[], hr1Hz: number[]) {
   };
 }
 
+/**
+ * Heart-rate recovery (HRRc): the largest drop in heart rate over 60 seconds,
+ * starting from a heart rate at or above threshold. Bigger = faster recovery.
+ */
+export function heartRateRecovery(hr1Hz: number[], threshold: number): { drop: number; from: number } | null {
+  let best: { drop: number; from: number } | null = null;
+  for (let i = 0; i + 60 < hr1Hz.length; i++) {
+    const start = hr1Hz[i];
+    const end = hr1Hz[i + 60];
+    if (!(start >= threshold) || !Number.isFinite(end)) continue;
+    const drop = start - end;
+    if (drop > 0 && (!best || drop > best.drop)) best = { drop: Math.round(drop), from: Math.round(start) };
+  }
+  return best;
+}
+
 /** Bucket-average a stream down to at most `maxPoints` points for charts. */
 export function downsample(values: number[], maxPoints = 800): number[] {
   if (values.length <= maxPoints) return values.map((v) => (Number.isFinite(v) ? Math.round(v * 10) / 10 : v));

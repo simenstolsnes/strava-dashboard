@@ -21,6 +21,8 @@ export type Metrics = {
   power_zone_seconds: number[] | null;
   efficiency_factor: number | null;
   decoupling: number | null;
+  hrrc: number | null;
+  hrrc_from: number | null;
   power_curve?: Record<string, number> | null;
 };
 
@@ -41,6 +43,8 @@ export type Activity = {
   weighted_average_watts: number | null;
   device_watts: boolean | null;
   suffer_score: number | null;
+  calories: number | null;
+  kilojoules: number | null;
   trainer: boolean | null;
   metrics: Metrics | null;
 };
@@ -79,6 +83,17 @@ export function tssOf(a: Activity, ftp: number | null): number | null {
   return Math.round((a.moving_time * np * np) / (ftp * ftp * 36));
 }
 
+/**
+ * Energy for a session: Strava's calorie estimate when we have it, otherwise
+ * mechanical work in kJ for rides with a power meter (≈ kcal burned, since
+ * ~24 % muscle efficiency cancels the 4.184 kJ/kcal conversion).
+ */
+export function kcalOf(a: Activity): { kcal: number; estimated: boolean } | null {
+  if (a.calories) return { kcal: Math.round(a.calories), estimated: false };
+  if (a.device_watts && a.kilojoules) return { kcal: Math.round(a.kilojoules), estimated: true };
+  return null;
+}
+
 /** Training load for the fitness model: Relative Effort, falling back to TSS. */
 export const loadOf = (a: Activity, ftp: number | null) => a.suffer_score ?? tssOf(a, ftp) ?? 0;
 
@@ -86,8 +101,8 @@ const one = <T,>(x: T | T[] | null): T | null => (Array.isArray(x) ? (x[0] ?? nu
 
 const BASE_COLS =
   "id,name,sport_type,start_date,start_date_local,distance,moving_time,elapsed_time,total_elevation_gain," +
-  "average_speed,average_heartrate,max_heartrate,average_watts,weighted_average_watts,device_watts,suffer_score,trainer";
-const METRIC_COLS = "normalized_power,hr_zone_seconds,power_zone_seconds,efficiency_factor,decoupling";
+  "average_speed,average_heartrate,max_heartrate,average_watts,weighted_average_watts,device_watts,suffer_score,trainer,calories,kilojoules";
+const METRIC_COLS = "normalized_power,hr_zone_seconds,power_zone_seconds,efficiency_factor,decoupling,hrrc,hrrc_from";
 
 
 type Row = Omit<Activity, "metrics"> & { activity_metrics: Metrics | Metrics[] | null };
@@ -231,13 +246,14 @@ export async function getOverview() {
       other: +hoursBy("other").toFixed(2),
       load: inWeek.reduce((s, a) => s + loadOf(a, ftp), 0),
       time: inWeek.reduce((s, a) => s + a.moving_time, 0),
+      kcal: inWeek.reduce((s, a) => s + (kcalOf(a)?.kcal ?? 0), 0),
       distance: inWeek.reduce((s, a) => s + (a.distance ?? 0), 0),
       count: inWeek.length,
     };
   });
   const current = weekly.at(-1)!;
   const prev4 = weekly.slice(-5, -1);
-  const avg = (k: "load" | "time" | "distance" | "count") => prev4.reduce((s, w) => s + w[k], 0) / prev4.length;
+  const avg = (k: "load" | "time" | "distance" | "count" | "kcal") => prev4.reduce((s, w) => s + w[k], 0) / prev4.length;
 
   // Heart-rate intensity distribution, last 28 days
   const since28 = addDays(t, -28);
@@ -282,7 +298,7 @@ export async function getOverview() {
     justFinished,
     weekly,
     thisWeek: current,
-    avg4: { load: avg("load"), time: avg("time"), distance: avg("distance"), count: avg("count") },
+    avg4: { load: avg("load"), time: avg("time"), distance: avg("distance"), count: avg("count"), kcal: avg("kcal") },
     zoneTotals,
     advice: buildAdvice(series, lowShare, sinceHard),
     recent: acts.slice(0, 5),
@@ -291,6 +307,8 @@ export async function getOverview() {
 }
 
 // ---------- Power ----------
+
+export type EffortHolder = { id: number; name: string; date: string };
 
 export async function getPowerData() {
   const [acts, profile, ftpInfo] = await Promise.all([getActivities(), getProfile(), getFtp()]);
@@ -304,12 +322,23 @@ export async function getPowerData() {
   const prev90 = bestCurve(between(180, 90).map((a) => a.metrics!.power_curve));
   const last28 = bestCurve(between(28, 0).map((a) => a.metrics!.power_curve));
 
+  const holderOf = (list: Activity[], d: number): EffortHolder | null => {
+    let best: Activity | null = null;
+    for (const a of list) if ((a.metrics!.power_curve![d] ?? 0) > (best?.metrics!.power_curve![d] ?? 0)) best = a;
+    return best ? { id: best.id, name: best.name, date: best.start_date_local } : null;
+  };
+  const sets = { allTime: withPower, last90: between(90, 0), prev90: between(180, 90) };
   const curve = CURVE_DURATIONS.filter((d) => allTime[d]).map((d) => ({
     seconds: d,
     allTime: allTime[d] ?? null,
     last90: last90[d] ?? null,
     prev90: prev90[d] ?? null,
     last28: last28[d] ?? null,
+    holders: {
+      allTime: holderOf(sets.allTime, d),
+      last90: holderOf(sets.last90, d),
+      prev90: holderOf(sets.prev90, d),
+    },
   }));
 
   // Monthly bests for key durations, last 12 months
@@ -319,8 +348,15 @@ export async function getPowerData() {
     return d.toISOString().slice(0, 7);
   });
   const monthly = months.map((m) => {
-    const best = bestCurve(withPower.filter((a) => day(a).startsWith(m)).map((a) => a.metrics!.power_curve));
-    return { month: m, p1m: best["60"] ?? null, p5m: best["300"] ?? null, p20m: best["1200"] ?? null };
+    const inMonth = withPower.filter((a) => day(a).startsWith(m));
+    const best = bestCurve(inMonth.map((a) => a.metrics!.power_curve));
+    return {
+      month: m,
+      p1m: best["60"] ?? null,
+      p5m: best["300"] ?? null,
+      p20m: best["1200"] ?? null,
+      holders: { p1m: holderOf(inMonth, 60), p5m: holderOf(inMonth, 300), p20m: holderOf(inMonth, 1200) },
+    };
   });
 
   // Which activity holds each 90-day best
@@ -373,8 +409,17 @@ export async function getProgress() {
   );
   const rides = rolling(
     asc
-      .filter((a) => sportGroup(a.sport_type) === "ride" && a.device_watts && a.metrics?.efficiency_factor)
+      .filter(
+        (a) => sportGroup(a.sport_type) === "ride" && a.device_watts && a.metrics?.efficiency_factor && a.moving_time >= 1800,
+      )
       .map((a) => ({ date: day(a), name: a.name, value: Math.round(a.metrics!.efficiency_factor! * refHr) })),
+  );
+
+  const hrrc = rolling(
+    [...acts]
+      .reverse()
+      .filter((a) => day(a) >= since && a.metrics?.hrrc != null)
+      .map((a) => ({ date: day(a), name: a.name, value: a.metrics!.hrrc!, from: a.metrics!.hrrc_from })),
   );
 
   const months = Array.from({ length: 12 }, (_, i) => {
@@ -382,6 +427,14 @@ export async function getProgress() {
     d.setUTCMonth(d.getUTCMonth() - (11 - i));
     return d.toISOString().slice(0, 7);
   });
+  const calories = months.map((m) => {
+    const inMonth = acts.filter((a) => day(a).startsWith(m));
+    const k = (g: SportGroup) =>
+      inMonth.filter((a) => sportGroup(a.sport_type) === g).reduce((s, a) => s + (kcalOf(a)?.kcal ?? 0), 0);
+    return { month: m, ride: k("ride"), run: k("run"), strength: k("strength"), other: k("other") };
+  });
+  const year = acts.filter((a) => day(a) >= since);
+  const kcalCoverage = year.length ? year.filter((a) => a.calories).length / year.length : 0;
   const monthly = months.map((m) => {
     const inMonth = acts.filter((a) => day(a).startsWith(m));
     const h = (g: SportGroup) =>
@@ -394,7 +447,8 @@ export async function getProgress() {
     .slice(0, 10)
     .map((a) => ({ id: a.id, name: a.name, date: a.start_date_local, sport: a.sport_type, value: a.metrics!.decoupling! }));
 
-  return { refHr, runs, rides, monthly, decoupling };
+  const threshold = profile.hrZones && profile.hrZones.length >= 4 ? profile.hrZones[3].min : null;
+  return { refHr, runs, rides, monthly, decoupling, hrrc, threshold, calories, kcalCoverage };
 }
 
 // ---------- Goals ----------
@@ -521,33 +575,42 @@ export async function getActivityDetail(id: number) {
   const row = check(
     await db()
       .from("activities")
-      .select(`${BASE_COLS},description,calories,laps,average_cadence,max_watts,kilojoules,activity_metrics(${METRIC_COLS},power_curve),activity_streams(data),notes(feeling,text)`)
+      .select(`${BASE_COLS},description,laps,average_cadence,max_watts,map_polyline,activity_metrics(${METRIC_COLS},power_curve),activity_streams(data),notes(feeling,text)`)
       .eq("id", id)
       .maybeSingle(),
   ) as
     | (Row & {
         description: string | null;
-        calories: number | null;
+        map_polyline: string | null;
         laps: Lap[] | null;
         average_cadence: number | null;
         max_watts: number | null;
-        kilojoules: number | null;
         activity_streams: { data: Streams } | { data: Streams }[] | null;
         notes: { feeling: number | null; text: string | null } | { feeling: number | null; text: string | null }[] | null;
       })
     | null;
   if (!row) return null;
-  const { activity_streams, notes, description, calories, laps, average_cadence, max_watts, kilojoules, ...rest } = row;
+  const { activity_streams, notes, description, map_polyline, laps, average_cadence, max_watts, ...rest } = row;
   const activity = toActivity(rest as Row);
   const [{ ftp }, profile, power] = await Promise.all([getFtp(), getProfile(), getPowerData()]);
   const best90 = Object.fromEntries(power.curve.map((c) => [c.seconds, c.last90]));
   return {
     activity,
-    extra: { description, calories, laps: laps ?? [], average_cadence, max_watts, kilojoules },
+    extra: {
+      description,
+      calories: activity.calories,
+      kilojoules: activity.kilojoules,
+      kcal: kcalOf(activity),
+      laps: laps ?? [],
+      average_cadence,
+      max_watts,
+      mapPolyline: map_polyline,
+    },
     streams: one(activity_streams)?.data ?? null,
     note: one(notes),
     ftp,
     tss: tssOf(activity, ftp),
+    threshold: profile.hrZones && profile.hrZones.length >= 4 ? profile.hrZones[3].min : null,
     profile,
     best90,
   };
