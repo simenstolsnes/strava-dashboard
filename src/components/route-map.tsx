@@ -32,6 +32,9 @@ export default function RouteMap({ polyline, color }: { polyline: string; color:
 
   if (points.length < 2) return null;
   return (
+    // Leaflet panes use z-index up to 1000; `isolate` keeps them inside this box so the
+    // sticky header and tab bar stay on top while scrolling.
+    <div className="relative isolate z-0">
     <MapContainer
       key={touch ? "touch" : "pointer"}
       bounds={points}
@@ -53,5 +56,6 @@ export default function RouteMap({ polyline, color }: { polyline: string; color:
       />
       <FitBounds points={points} />
     </MapContainer>
+    </div>
   );
 }

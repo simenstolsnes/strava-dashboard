@@ -45,7 +45,7 @@ export function Stat({ label, value, unit, delta, hint, info, infoAlign }: {
   return (
     <div className="min-w-0">
       <p className="label flex items-start">
-        <span className="min-w-0 break-words">{label}</span>
+        <span className="min-w-0 hyphens-auto">{label}</span>
         {info && (
           <InfoTip label={`About ${label}`} align={infoAlign}>
             {info}
