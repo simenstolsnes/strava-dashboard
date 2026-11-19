@@ -1,0 +1,33 @@
+{
+  "name": "strava-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "backfill": "tsx scripts/backfill.ts",
+    "webhook": "tsx scripts/register-webhook.ts",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "jose": "^6.2.18",
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "recharts": "^3.11.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}

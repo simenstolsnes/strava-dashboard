@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/* ---- Design tokens (light) ---- */
+:root {
+  color-scheme: light;
+  --page: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+  --accent: #eb6834;
+  --accent-ink: #ffffff;
+
+  /* Categorical, fixed order: ride, run, strength, other, … */
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s7: #6250d6;
+
+  /* Ordinal ramp for zones Z1..Z7 (blue, light→dark) */
+  --z1: #86b6ef;
+  --z2: #5598e7;
+  --z3: #2a78d6;
+  --z4: #256abf;
+  --z5: #1c5cab;
+  --z6: #184f95;
+  --z7: #104281;
+
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --warning: #fab219;
+  --critical: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #242423;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+    --accent: #d95926;
+
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --s7: #9085e9;
+
+    --z1: #cde2fb;
+    --z2: #9ec5f4;
+    --z3: #6da7ec;
+    --z4: #3987e5;
+    --z5: #2a78d6;
+    --z6: #256abf;
+    --z7: #1c5cab;
+
+    --good-ink: #0ca30c;
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-grid: var(--grid);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-good: var(--good-ink);
+  --color-warn: var(--warning);
+  --color-critical: var(--critical);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Recharts: recessive chrome */
+.recharts-cartesian-axis-tick-value {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.recharts-surface:focus,
+.recharts-wrapper:focus,
+.recharts-sector:focus {
+  outline: none;
+}
