@@ -50,11 +50,17 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
       }))
     : [];
 
-  // Laps start back to back, so their elapsed times give each lap's span on the stream time axis
-  const lapStarts = extra.laps.reduce<number[]>((acc, l, i) => [...acc, i === 0 ? 0 : acc[i - 1] + extra.laps[i - 1].elapsed_time], []);
+  // Laps run back to back. On a moving-time axis, each lap spans its moving time, scaled so the
+  // laps end exactly where the chart ends; older streams use elapsed time.
+  const movingAxis = streams?.axis === "moving";
+  const lapLen = (l: (typeof extra.laps)[number]) => (movingAxis ? l.moving_time : l.elapsed_time);
+  const lapTotal = extra.laps.reduce((s, l) => s + lapLen(l), 0);
+  const streamEnd = streams?.time?.at(-1) ?? lapTotal;
+  const scale = movingAxis && lapTotal ? streamEnd / lapTotal : 1;
+  const lapStarts = extra.laps.reduce<number[]>((acc, l, i) => [...acc, i === 0 ? 0 : acc[i - 1] + lapLen(extra.laps[i - 1]) * scale], []);
   const lapViews: LapView[] = extra.laps.map((l, i) => ({
     start: lapStarts[i],
-    end: lapStarts[i] + l.elapsed_time,
+    end: lapStarts[i] + lapLen(l) * scale,
     elapsed: l.elapsed_time,
     moving: l.moving_time,
     distance: l.distance,
@@ -165,7 +171,7 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
       )}
 
       {rows.length > 0 && (
-        <Card title="Streams" subtitle="Tap or hover to inspect; the charts share one cursor">
+        <Card title="Streams" subtitle={streams?.axis === "moving" ? "On moving time: stops are left out. Tap or hover to inspect." : "Tap or hover to inspect; the charts share one cursor"}>
           <StreamsPanel
             rows={rows}
             show={{
