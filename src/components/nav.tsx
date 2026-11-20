@@ -8,6 +8,7 @@ const TABS = [
   { href: "/power", label: "Power", icon: "M13 2L4 14h7l-1 8 9-12h-7l1-8z" },
   { href: "/activities", label: "Activities", icon: "M4 6h16M4 12h16M4 18h10" },
   { href: "/progress", label: "Progress", icon: "M3 17l6-6 4 4 8-8M15 7h6v6" },
+  { href: "/recovery", label: "Recovery", icon: "M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" },
   { href: "/goals", label: "Goals", icon: "M12 21a9 9 0 100-18 9 9 0 000 18zm0-4a5 5 0 100-10 5 5 0 000 10zm0-4a1 1 0 100-2 1 1 0 000 2z" },
 ];
 

@@ -51,3 +51,9 @@ export function longDate(local: string): string {
     timeZone: "UTC",
   });
 }
+
+/** Hours → "7h 05m" */
+export const hmin = (hours: number) => {
+  const total = Math.round(hours * 60);
+  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, "0")}m`;
+};

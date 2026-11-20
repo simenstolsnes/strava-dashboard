@@ -9,6 +9,7 @@
     "lint": "eslint",
     "backfill": "tsx scripts/backfill.ts",
     "webhook": "tsx scripts/register-webhook.ts",
+    "garmin-backfill": "tsx scripts/garmin-backfill.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
