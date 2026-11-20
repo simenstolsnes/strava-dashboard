@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { exchangeCode, saveTokens, SCOPES } from "@/lib/strava";
-import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+import { createHandoffToken, createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+import { isAllowedPreviewOrigin } from "@/lib/preview";
 import { refreshAthlete, syncRecent } from "@/lib/sync";
 import { ownerAthleteId } from "@/lib/env";
 
@@ -39,8 +40,15 @@ export async function GET(request: NextRequest) {
     await syncRecent(athleteId, 30);
   });
 
-  const res = NextResponse.redirect(new URL("/", request.url));
+  // Login started on a preview deployment: hand the session back to it.
+  const next = request.cookies.get("auth_next")?.value;
+  const target = isAllowedPreviewOrigin(next)
+    ? `${next}/api/auth/handoff?token=${encodeURIComponent(await createHandoffToken(athleteId, next))}`
+    : new URL("/", request.url);
+
+  const res = NextResponse.redirect(target);
   res.cookies.set(SESSION_COOKIE, await createSessionToken(athleteId), sessionCookieOptions);
   res.cookies.delete("oauth_state");
+  res.cookies.delete("auth_next");
   return res;
 }

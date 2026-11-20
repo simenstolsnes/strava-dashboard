@@ -84,6 +84,12 @@ Live at **https://training-dashboard-bay.vercel.app** (Vercel project `training-
 branches get a preview URL. Commits must be authored with the email on your Vercel account
 (this repo uses `simen.stolsnes@gmail.com`), or Vercel blocks the deploy.
 
+**Logging in on preview deployments:** Strava allows one callback domain (production), so a preview
+sends you to production's Strava login, and production hands the session back to that preview with a
+60-second signed token (`/api/auth/handoff`). Only this project's `training-dashboard-*-simen11.vercel.app`
+URLs are accepted. Previews use the **production database** (their env vars are the production ones,
+minus the cron and webhook secrets), so treat actions on a preview as real.
+
 Set up once, already done for this project:
 
 1. Add every variable from `.env.local` under **Settings → Environment Variables**.
