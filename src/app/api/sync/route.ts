@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentAthlete } from "@/lib/auth";
-import { refreshAthlete, syncRecent } from "@/lib/sync";
+import { refreshAthlete, refreshRecentDetails, syncRecent } from "@/lib/sync";
 
 export const maxDuration = 300;
 
@@ -10,5 +10,7 @@ export async function POST() {
   if (!athleteId) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   await refreshAthlete(athleteId);
   const result = await syncRecent(athleteId, 25);
-  return NextResponse.json(result);
+  // Also pick up edited descriptions from the last week (Strava sends no webhook for those)
+  const detailsRefreshed = await refreshRecentDetails(athleteId, 7);
+  return NextResponse.json({ ...result, detailsRefreshed });
 }

@@ -145,7 +145,8 @@ export type FitnessPoint = { date: string; fitness: number; fatigue: number; for
 /**
  * Banister-style fitness model (same idea as Strava Fitness & Freshness and
  * TrainingPeaks CTL/ATL/TSB). Fitness = 42-day load average, fatigue = 7-day,
- * form = yesterday's fitness − fatigue.
+ * form = fitness − fatigue including the day's own sessions, so a hard workout
+ * shows up in today's form straight away (like Strava's Fitness & Freshness).
  */
 export function fitnessSeries(loads: DayLoad[], untilDate: string): FitnessPoint[] {
   if (!loads.length) return [];
@@ -159,10 +160,9 @@ export function fitnessSeries(loads: DayLoad[], untilDate: string): FitnessPoint
     const date = d.toISOString().slice(0, 10);
     if (date > untilDate) break;
     const load = byDay.get(date) ?? 0;
-    const form = ctl - atl;
     ctl += (load - ctl) / 42;
     atl += (load - atl) / 7;
-    out.push({ date, load, fitness: round1(ctl), fatigue: round1(atl), form: round1(form) });
+    out.push({ date, load, fitness: round1(ctl), fatigue: round1(atl), form: round1(ctl - atl) });
   }
   return out;
 }
