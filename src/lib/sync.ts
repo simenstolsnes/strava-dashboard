@@ -13,8 +13,14 @@ import {
 
 type Context = { hrZones: Zone[] | null; powerZones: Zone[] | null };
 
-/** Bump when computeMetrics gains a metric; `npm run backfill -- --refresh` reprocesses older rows. */
-export const METRICS_VERSION = 2;
+/**
+ * Bump when computeMetrics or the stored chart streams change; `npm run backfill -- --refresh`
+ * reprocesses older rows. v3: chart streams on a moving-time axis.
+ */
+export const METRICS_VERSION = 3;
+
+/** Longest gap (s) between moving samples still counted as moving time (smart recording). */
+const MAX_MOVING_STEP = 10;
 
 /** Threshold heart rate: the bottom of Strava's zone 4 ("Threshold") in a 5-zone setup. */
 export const thresholdHr = (zones: Zone[] | null) => (zones && zones.length >= 4 ? zones[3].min : null);
@@ -132,10 +138,31 @@ function computeMetrics(sport: string, s: StreamSet, ctx: Context) {
   };
 }
 
-function chartStreams(s: StreamSet) {
-  const pick = (k: keyof StreamSet) => (s[k]?.data ? downsample(s[k]!.data) : undefined);
+/**
+ * Downsampled streams for the activity charts, on a moving-time axis: samples
+ * where Strava marks you as stopped are dropped, and pauses don't advance the
+ * clock, so breaks leave no holes in heart rate, power or pace.
+ */
+export function chartStreams(s: StreamSet) {
+  const time = s.time?.data ?? [];
+  const moving = s.moving?.data as unknown as boolean[] | undefined;
+  const hasMoving = !!moving && moving.length === time.length && moving.some(Boolean);
+
+  // Indices to keep, and moving seconds elapsed at each of them
+  const keep: number[] = [];
+  const movingTime: number[] = [];
+  let clock = 0;
+  for (let i = 0; i < time.length; i++) {
+    if (hasMoving && !moving![i]) continue;
+    if (keep.length) clock += Math.min(time[i] - time[keep[keep.length - 1]], MAX_MOVING_STEP);
+    keep.push(i);
+    movingTime.push(clock);
+  }
+
+  const pick = (k: keyof StreamSet) => (s[k]?.data ? downsample(keep.map((i) => s[k]!.data[i])) : undefined);
   return {
-    time: pick("time"),
+    axis: hasMoving ? ("moving" as const) : ("elapsed" as const),
+    time: downsample(hasMoving ? movingTime : keep.map((i) => time[i])),
     heartrate: pick("heartrate"),
     watts: pick("watts"),
     velocity: pick("velocity_smooth"),
@@ -231,17 +258,22 @@ export async function processPending(
   withDetail: boolean,
   scope: "unprocessed" | "outdated" = "unprocessed",
 ) {
-  const base = db().from("activities").select("id");
+  const base = db().from("activities").select("id, detail_fetched");
   const filtered =
     scope === "outdated"
       ? base.or(`processed.eq.false,metrics_version.lt.${METRICS_VERSION},metrics_version.is.null`)
       : base.eq("processed", false);
-  const pending = check(await filtered.order("start_date", { ascending: false }).limit(max)) as { id: number }[];
+  const pending = check(await filtered.order("start_date", { ascending: false }).limit(max)) as {
+    id: number;
+    detail_fetched: boolean | null;
+  }[];
   const ctx = await loadContext(athleteId);
   let done = 0;
   try {
-    for (const { id } of pending) {
-      await processActivity(athleteId, id, { withDetail, ctx });
+    for (const { id, detail_fetched } of pending) {
+      // A refresh only needs detail (calories, map, laps) once; after that, streams are enough.
+      const needsDetail = withDetail && (scope === "unprocessed" || !detail_fetched);
+      await processActivity(athleteId, id, { withDetail: needsDetail, ctx });
       done++;
     }
   } catch (e) {

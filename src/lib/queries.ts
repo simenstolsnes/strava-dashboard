@@ -552,6 +552,8 @@ export async function getActivityList(group: SportGroup | null) {
 }
 
 export type Streams = {
+  /** "moving": time axis counts moving seconds only (stops removed). Older rows are elapsed. */
+  axis?: "moving" | "elapsed";
   time?: number[];
   heartrate?: number[];
   watts?: number[];
