@@ -220,6 +220,29 @@ export async function processActivity(
   );
 }
 
+/**
+ * Strava's webhook only reports title, sport type and privacy changes, never
+ * description edits. Re-fetch the detail (one request each) of recent
+ * activities so edited descriptions, names and calories catch up daily.
+ */
+export async function refreshRecentDetails(athleteId: number, days = 7) {
+  const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
+  const recent = check(
+    await db().from("activities").select("id").gte("start_date", since).eq("processed", true),
+  ) as { id: number }[];
+  let updated = 0;
+  try {
+    for (const { id } of recent) {
+      const detail = await strava.activity(athleteId, id);
+      check(await db().from("activities").upsert(detailRow(detail)));
+      updated++;
+    }
+  } catch (e) {
+    if (!(e instanceof RateLimitError)) throw e;
+  }
+  return updated;
+}
+
 export async function deleteActivity(activityId: number) {
   check(await db().from("activities").delete().eq("id", activityId));
 }
