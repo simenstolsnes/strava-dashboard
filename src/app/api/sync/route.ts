@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentAthlete } from "@/lib/auth";
 import { refreshAthlete, refreshRecentDetails, syncRecent } from "@/lib/sync";
+import { garminConfigured, syncGarminRecent } from "@/lib/garmin";
 
 export const maxDuration = 300;
 
@@ -12,5 +13,6 @@ export async function POST() {
   const result = await syncRecent(athleteId, 25);
   // Also pick up edited descriptions from the last week (Strava sends no webhook for those)
   const detailsRefreshed = await refreshRecentDetails(athleteId, 7);
-  return NextResponse.json({ ...result, detailsRefreshed });
+  const garmin = garminConfigured() ? await syncGarminRecent(7).catch((e: Error) => ({ garminError: e.message })) : {};
+  return NextResponse.json({ ...result, detailsRefreshed, ...garmin });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { refreshAthlete, refreshRecentDetails, syncRecent } from "@/lib/sync";
 import { ownerAthleteId } from "@/lib/env";
+import { garminConfigured, syncGarminRecent } from "@/lib/garmin";
 
 export const maxDuration = 300;
 
@@ -16,5 +17,7 @@ export async function GET(request: Request) {
   await refreshAthlete(athleteId);
   const result = await syncRecent(athleteId, 40);
   const detailsRefreshed = await refreshRecentDetails(athleteId, 7);
-  return NextResponse.json({ ...result, detailsRefreshed });
+  // Garmin has no webhooks: re-read the last week every day
+  const garmin = garminConfigured() ? await syncGarminRecent(7).catch((e: Error) => ({ garminError: e.message })) : {};
+  return NextResponse.json({ ...result, detailsRefreshed, ...garmin });
 }
