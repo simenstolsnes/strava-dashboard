@@ -94,8 +94,19 @@ const ago = (h: Habit, today: string) => {
 const size = (h: Habit) =>
   h.km >= 1 && !h.kind.includes("intervals") && h.kind !== "hiit" ? `~${h.km} km` : `~${h.minutes} min`;
 
-/** Pick the next session from the athlete's own repertoire. */
-export function suggest(acts: Activity[], form: number, daysSinceHard: number | null, today: string): Suggestion {
+export type LastHard = { name: string; days: number; sport: "ride" | "run" | "other" } | null;
+
+const dayWord = (d: number) => (d === 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`);
+const sportOf = (kind: SessionKind) => (kind.includes("ride") || kind === "indoor-intervals" ? "ride" : kind.includes("run") ? "run" : "other");
+
+/**
+ * Pick the next session from the athlete's own repertoire.
+ * - Hard session today → recovery; yesterday → easy endurance.
+ * - Otherwise a key session: the interval type with the highest
+ *   "how often you do it × days since you last did it", so habits you keep
+ *   come round regularly and a rare one doesn't win just by being old.
+ */
+export function suggest(acts: Activity[], form: number, lastHard: LastHard, today: string): Suggestion {
   const hs = habits(acts, today);
   const pick = (kinds: SessionKind[]) =>
     hs
@@ -103,25 +114,27 @@ export function suggest(acts: Activity[], form: number, daysSinceHard: number | 
       // Prefer what you do often, but rotate: the one done least recently wins ties
       .sort((a, b) => b.count - a.count || a.last.start_date_local.localeCompare(b.last.start_date_local))[0];
   const basis = (h: Habit) => ({ id: h.last.id, name: h.last.name, date: h.last.start_date_local });
+  const hardNote = lastHard ? `Last hard session: “${lastHard.name}”, ${dayWord(lastHard.days)}.` : "";
 
   const easy = pick(["easy-run", "endurance-ride"]);
-  if (form < -30 || (daysSinceHard !== null && daysSinceHard < 1)) {
+  if (form < -30 || (lastHard && lastHard.days < 1)) {
+    const why = lastHard && lastHard.days < 1 ? `You trained hard today (“${lastHard.name}”).` : "Fatigue is high.";
     return easy
       ? {
-          title: `Rest or very easy ${LABEL[easy.kind].toLowerCase()}`,
+          title: `Recovery: rest, or ${LABEL[easy.kind].toLowerCase()} in zone 1`,
           meta: size(easy),
-          detail: "Fatigue is high. Keep it in zone 1, or take the day off.",
+          detail: `${why} Take tomorrow off, or keep it in zone 1–2.`,
           basis: basis(easy),
         }
-      : { title: "Rest day", meta: "", detail: "Fatigue is high. Recovery is the session today.", basis: null };
+      : { title: "Recovery day", meta: "", detail: `${why} Recovery is the next session.`, basis: null };
   }
 
-  if (form < -10 || (daysSinceHard !== null && daysSinceHard < 2)) {
+  if (form < -10 || (lastHard && lastHard.days < 2)) {
     if (easy) {
       return {
         title: `${LABEL[easy.kind]}, zone 2`,
         meta: size(easy),
-        detail: `Like “${easy.last.name}”, ${ago(easy, today)}. Save intervals for when form is above −10.`,
+        detail: `${hardNote} Keep this one easy, like “${easy.last.name}” (${ago(easy, today)}). Save intervals for when form is above −10.`,
         basis: basis(easy),
       };
     }
@@ -139,15 +152,22 @@ export function suggest(acts: Activity[], form: number, daysSinceHard: number | 
     }
   }
 
-  // Neutral (or fresh without a long-session habit): a key session you already do
+  // Neutral (or fresh without a long-session habit): a key session you already do.
+  // Score = how often you do it × days since the last one.
   const key = hs
     .filter((h) => h.kind.includes("intervals"))
-    .sort((a, b) => a.last.start_date_local.localeCompare(b.last.start_date_local))[0];
+    .map((h) => ({ h, score: h.count * Math.max(1, daysAgo(h, today)) }))
+    .sort((a, b) => b.score - a.score)[0]?.h;
   if (key) {
+    const every = Math.max(1, Math.round(56 / key.count));
+    const balance =
+      lastHard && lastHard.sport !== "other" && lastHard.sport !== sportOf(key.kind)
+        ? ` Your recent hard work was on the ${lastHard.sport === "ride" ? "bike" : "run"}, so this balances it.`
+        : "";
     return {
       title: `${LABEL[key.kind]} ${spec(key.last.name) ?? ""}`.trim(),
-      meta: `${daysAgo(key, today)} d ago`,
-      detail: `Your least recent key session: “${key.last.name}”, ${ago(key, today)}. Repeat it, or add one rep.`,
+      meta: `last ${daysAgo(key, today)} d ago`,
+      detail: `${hardNote} You do ${LABEL[key.kind].toLowerCase()} about every ${every} days; the last was “${key.last.name}”, ${ago(key, today)}.${balance} Repeat it, or add one rep.`,
       basis: basis(key),
     };
   }

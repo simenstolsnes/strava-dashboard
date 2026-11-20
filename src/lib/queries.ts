@@ -9,7 +9,7 @@ import {
   type Zone,
 } from "./metrics";
 import { addDays, daysBetween, monthStart, today, weekStart, yearStart } from "./time";
-import { suggest } from "./guidance";
+import { classify, suggest, type LastHard } from "./guidance";
 
 // ---------- Types ----------
 
@@ -96,6 +96,22 @@ export function kcalOf(a: Activity): { kcal: number; estimated: boolean } | null
 
 /** Training load for the fitness model: Relative Effort, falling back to TSS. */
 export const loadOf = (a: Activity, ftp: number | null) => a.suffer_score ?? tssOf(a, ftp) ?? 0;
+
+/**
+ * A hard session: high Relative Effort or TSS, or at least 15 % of 30+ minutes
+ * spent at or above threshold heart rate (zone 4–5), which catches interval
+ * sessions with a moderate overall load.
+ */
+export function isHard(a: Activity, ftp: number | null) {
+  if ((a.suffer_score ?? 0) >= 45 || (tssOf(a, ftp) ?? 0) >= 70) return true;
+  // Structured interval sessions (e.g. "Zwift - 3 x 6 min") are key sessions even at moderate load
+  const kind = classify(a);
+  if (kind && kind.includes("intervals") && /\d+\s*[x×]\s*\d+|interval|threshold|terskel/i.test(a.name)) return true;
+  const z = a.metrics?.hr_zone_seconds;
+  if (!z || a.moving_time < 1800) return false;
+  const total = z.reduce((s, x) => s + x, 0);
+  return total > 0 && ((z[3] ?? 0) + (z[4] ?? 0)) / total >= 0.15;
+}
 
 const one = <T,>(x: T | T[] | null): T | null => (Array.isArray(x) ? (x[0] ?? null) : x);
 
@@ -265,13 +281,21 @@ export async function getOverview() {
   const zoneSum = zoneTotals.reduce((s, x) => s + x, 0);
   const lowShare = zoneSum ? ((zoneTotals[0] ?? 0) + (zoneTotals[1] ?? 0)) / zoneSum : null;
 
-  const lastHard = acts.find((a) => (a.suffer_score ?? 0) >= 45 || (tssOf(a, ftp) ?? 0) >= 70);
+  const lastHard = acts.find((a) => isHard(a, ftp));
   const sinceHard = lastHard ? daysBetween(day(lastHard), t) : null;
+  const lastHardInfo: LastHard = lastHard
+    ? {
+        name: lastHard.name,
+        days: sinceHard!,
+        sport: sportGroup(lastHard.sport_type) === "ride" ? "ride" : sportGroup(lastHard.sport_type) === "run" ? "run" : "other",
+      }
+    : null;
 
-  // 7-day projection if you rest (an estimate, drawn dashed)
+  // Two years of history (the chart switches between 4 months, 1 year and 2 years),
+  // plus a 7-day projection if you rest (an estimate, drawn dashed)
   const last = series.at(-1);
   const chart: Array<{ date: string; fitness?: number; fatigue?: number; fitnessRest?: number; fatigueRest?: number }> =
-    series.slice(-120).map((p) => ({ date: p.date, fitness: p.fitness, fatigue: p.fatigue }));
+    series.slice(-730).map((p) => ({ date: p.date, fitness: p.fitness, fatigue: p.fatigue }));
   if (last) {
     chart[chart.length - 1] = { ...chart[chart.length - 1], fitnessRest: last.fitness, fatigueRest: last.fatigue };
     let ctl = last.fitness;
@@ -294,7 +318,8 @@ export async function getOverview() {
     weekAgo: series.at(-8) ?? null,
     series: series.slice(-180),
     chart,
-    suggestion: last ? suggest(acts, last.form, sinceHard, t) : null,
+    suggestion: last ? suggest(acts, last.form, lastHardInfo, t) : null,
+    sinceHard,
     justFinished,
     weekly,
     thisWeek: current,
@@ -530,7 +555,7 @@ export async function getGoals(): Promise<GoalProgress[]> {
       current >= g.target
         ? "Reached"
         : g.kind === "volume"
-          ? `${fmtLeft} ${unit} left this ${g.period}`
+          ? `${fmtLeft} ${unit === "sessions" && fmtLeft === 1 ? "session" : unit} left this ${g.period}`
           : `${fmtLeft}${unit ? ` ${unit}` : ""} to go`;
     return {
       ...g,

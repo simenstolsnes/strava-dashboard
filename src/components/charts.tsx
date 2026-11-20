@@ -86,6 +86,15 @@ const monthLabel = (m: string | number) =>
 
 // ---------- Fitness & fatigue ----------
 
+const FITNESS_RANGES = {
+  "4m": { label: "4 months", days: 122 },
+  "1y": { label: "1 year", days: 365 },
+  "2y": { label: "2 years", days: 730 },
+} as const;
+
+const fullDay = (d: string | number) =>
+  new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
 export function FitnessChart({
   data,
 }: {
@@ -98,16 +107,44 @@ export function FitnessChart({
     { key: "fatigueRest", label: "Fatigue if you rest", color: "var(--fatigue)", format: (v) => v.toFixed(0), dashed: true },
   ];
   const today = data.find((d) => d.fitnessRest != null && d.fitness != null)?.date;
+  const [range, setRange] = useState<keyof typeof FITNESS_RANGES>("4m");
+  const from = (() => {
+    const d = new Date(`${today ?? data.at(-1)?.date}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - FITNESS_RANGES[range].days);
+    return d.toISOString().slice(0, 10);
+  })();
+  const shown = data.filter((d) => d.date >= from);
+  const long = range !== "4m";
+  const tick = (d: string | number) =>
+    long
+      ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" })
+      : dayLabel(d);
   return (
     <>
-      <Legend series={[series[0], series[1], { ...series[2], label: "Next 7 days if you rest", color: "var(--muted)" }]} />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <Legend series={[series[0], series[1], { ...series[2], label: "Next 7 days if you rest", color: "var(--muted)" }]} />
+        <div role="radiogroup" aria-label="Time range" className="flex rounded-md border border-line bg-rock/50 p-0.5">
+          {(Object.keys(FITNESS_RANGES) as (keyof typeof FITNESS_RANGES)[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={range === k}
+              onClick={() => setRange(k)}
+              className={`rounded px-2.5 py-1 text-xs font-semibold ${range === k ? "bg-teal text-white" : "text-ink-2 hover:text-ink"}`}
+            >
+              {FITNESS_RANGES[k].label}
+            </button>
+          ))}
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+        <ComposedChart data={shown} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
           {GRID}
-          <XAxis dataKey="date" {...AXIS} tickFormatter={dayLabel} minTickGap={40} />
+          <XAxis dataKey="date" {...AXIS} tickFormatter={tick} minTickGap={40} />
           <YAxis {...AXIS} axisLine={false} width={32} />
           {today && <ReferenceLine x={today} stroke="var(--muted)" strokeWidth={1} />}
-          <Tooltip cursor={CURSOR} content={makeTip(series, (l) => dayLabel(l))} />
+          <Tooltip cursor={CURSOR} content={makeTip(series, (l) => fullDay(l))} />
           <Area dataKey="fitness" stroke="var(--fitness)" strokeWidth={2} fill="var(--fitness)" fillOpacity={0.1} dot={false} isAnimationActive={false} />
           <Line dataKey="fatigue" stroke="var(--fatigue)" strokeWidth={2} dot={false} isAnimationActive={false} />
           <Line dataKey="fitnessRest" stroke="var(--fitness)" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />

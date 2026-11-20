@@ -29,7 +29,14 @@ export default async function TodayPage() {
     );
   }
 
-  const grade = trailGrade(o.now.form);
+  const baseGrade = trailGrade(o.now.form);
+  // Form lags a single hard day; don't call it "a good day for a key session" right after one.
+  const grade =
+    o.sinceHard === 0
+      ? { ...baseGrade, text: "You trained hard today. Let it sink in: recover before the next key session." }
+      : o.sinceHard === 1 && o.now.form > -10
+        ? { ...baseGrade, text: "Hard session yesterday. Keep today easy; a key session fits again tomorrow." }
+        : baseGrade;
   const fitDelta = o.weekAgo ? o.now.fitness - o.weekAgo.fitness : 0;
   // Form advice is carried by the signpost and grade; only the extra flags show here.
   const warnings = o.advice.filter((a) => a.title.startsWith("Fitness rising fast") || a.title.includes("zone 1–2"));
