@@ -21,15 +21,15 @@ import Link from "next/link";
 
 // ---------- shared chrome ----------
 
-const AXIS = { stroke: "var(--border)", tickLine: false, tick: { fill: "var(--muted)", fontSize: 12 } } as const;
-const GRID = <CartesianGrid stroke="var(--hairline)" vertical={false} />;
-const CURSOR = { stroke: "var(--muted)", strokeWidth: 1 };
+export const AXIS = { stroke: "var(--border)", tickLine: false, tick: { fill: "var(--muted)", fontSize: 12 } } as const;
+export const GRID = <CartesianGrid stroke="var(--hairline)" vertical={false} />;
+export const CURSOR = { stroke: "var(--muted)", strokeWidth: 1 };
 const compact = (v: number) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 2)}k` : String(Math.round(v)));
 
 /** `dashed` marks an estimate: drawn dashed everywhere, measured values stay solid. */
 export type Series = { key: string; label: string; color: string; format?: (v: number) => string; dashed?: boolean };
 
-const lineKey = (s: Series, w = 12) =>
+export const lineKey = (s: Series, w = 12) =>
   s.dashed ? (
     <span className="inline-block shrink-0" style={{ width: w, borderTop: `2px dashed ${s.color}` }} />
   ) : (
@@ -43,7 +43,7 @@ type TipProps = {
 };
 
 /** Tooltip: value first (strong), series name second, keyed by a short line. */
-function makeTip(series: Series[], labelFormat: (l: string | number, row?: Record<string, unknown>) => ReactNode) {
+export function makeTip(series: Series[], labelFormat: (l: string | number, row?: Record<string, unknown>) => ReactNode) {
   return function Tip({ active, label, payload }: TipProps) {
     if (!active || !payload?.length) return null;
     const row = payload[0]?.payload;

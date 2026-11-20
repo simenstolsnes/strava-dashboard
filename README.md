@@ -1,6 +1,6 @@
 # Training dashboard
 
-A personal, mobile-first training dashboard built on Strava data: fitness / fatigue / form,
+A personal, mobile-first training dashboard built on Strava data (plus Garmin wellness data): fitness / fatigue / form,
 power curves, heart-rate zones, aerobic progress, goals and workout suggestions.
 Installable on your phone as an app (PWA).
 
@@ -20,6 +20,7 @@ Phone / browser ◀────────────────────�
 | **Power** | FTP / eFTP, W/kg, power curve (90 d vs previous 90 d vs all), best efforts, monthly bests |
 | **Activities** | All sessions by month, filter by sport → detail page with HR / power / pace / elevation streams, zones, NP / IF / TSS, laps, power curve vs 90-day best, private notes |
 | **Progress** | Running pace and cycling power at a fixed heart rate over 12 months, monthly hours, aerobic decoupling |
+| **Recovery** | From Garmin: last night's sleep (stages, score), resting HR and VO2 max vs your normal, heart rate through a day, and trends (1 month → all) for sleep, sleep score, resting HR, VO2 max, Body Battery, stress and steps |
 | **Goals** | Volume (km / hours / sessions per week, month or year), power for a duration, FTP, fitness level |
 
 ### Where the numbers come from
@@ -30,6 +31,8 @@ Phone / browser ◀────────────────────�
 - **Fitness model:** 42-day (fitness) and 7-day (fatigue) exponentially weighted averages of daily load.
   Load = Strava Relative Effort, falling back to TSS for sessions without heart rate. This mirrors
   Strava's Fitness & Freshness but is our own estimate, so the values will differ somewhat.
+- **From Garmin:** sleep, sleep score, resting / daily heart rate, VO2 max (Garmin's estimate), Body Battery, stress, steps.
+  "Your usual" and "normal" are medians of the previous 30 days, calculated here.
 - **eFTP:** 95 % of best 20-minute power in the last 90 days (used only when no FTP is set).
 
 ## Setup
@@ -76,7 +79,21 @@ npm run backfill -- --months=60
 Strava allows roughly 100 requests per 15 minutes and 1,000 per day, and each activity needs one request.
 The script waits automatically, and you can stop and re-run it at any time.
 
-### 5. Deploy to Vercel
+### 5. Garmin (optional, for the Recovery page)
+
+Create a key at [Garmin Connect → Personal API](https://connect.garmin.com/app/settings/personalApiToken) and put it in
+`.env.local` (and in Vercel) as `GARMIN_PERSONAL_API_KEY`. Then import your history:
+
+```bash
+npm run garmin-backfill              # last 24 months
+npm run garmin-backfill -- --months=60
+```
+
+Garmin has no webhooks, so the daily cron re-reads the last 7 days, **Sync now** in Settings does the same,
+and opening the Recovery page refreshes the last two days when the data is more than 20 minutes old.
+The key is exchanged for a 24-hour token on the server; keys expire after at most a year (Garmin emails you first).
+
+### 6. Deploy to Vercel
 
 Live at **https://training-dashboard-bay.vercel.app** (Vercel project `training-dashboard`, Stockholm region).
 
@@ -102,7 +119,7 @@ Set up once, already done for this project:
 
 The daily cron in `vercel.json` (04:00 UTC) catches anything the webhook missed.
 
-### 6. Install on your phone
+### 7. Install on your phone
 
 - **iPhone (Safari):** open the site → Share → **Add to Home Screen**
 - **Android (Chrome):** open the site → ⋮ → **Install app**
@@ -118,6 +135,8 @@ MCP connector (`https://mcp.strava.com/mcp`), either in Claude Code in this repo
 src/lib/metrics.ts      pure training-science math (power curve, NP, TSS, zones, fitness model)
 src/lib/sync.ts         Strava → database: fetch, compute, store
 src/lib/strava.ts       Strava API client with token refresh and rate-limit tracking
+src/lib/garmin.ts       Garmin Personal API client + wellness sync
+src/lib/recovery.ts     database → Recovery page data
 src/lib/queries.ts      database → page data (overview, power, progress, goals, advice rules)
 src/app/(app)/…         pages
 src/app/api/…           login, webhook, cron, manual sync
