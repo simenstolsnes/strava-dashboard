@@ -10,11 +10,11 @@ const GROUPS: SportGroup[] = ["ride", "run", "strength", "other"];
 const PAGE = 60;
 
 export default async function ActivitiesPage({ searchParams }: PageProps<"/activities">) {
-  await requireAthlete();
+  const me = await requireAthlete();
   const sp = await searchParams;
   const sport = GROUPS.includes(sp.sport as SportGroup) ? (sp.sport as SportGroup) : null;
   const shown = Math.max(PAGE, Number(sp.n) || PAGE);
-  const all = await getActivityList(sport);
+  const all = await getActivityList(me, sport);
   const list = all.slice(0, shown);
 
   // Group by month for scanning

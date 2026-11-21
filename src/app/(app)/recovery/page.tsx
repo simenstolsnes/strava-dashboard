@@ -4,6 +4,7 @@ import { getRecovery } from "@/lib/recovery";
 import { Card, Empty, Icon, PageTitle, Stat } from "@/components/ui";
 import { HeartRateDayChart, RecoveryTrends } from "@/components/recovery-charts";
 import { hmin } from "@/lib/format";
+import { OWNER, personByAthlete } from "@/lib/people";
 
 export const metadata = { title: "Recovery" };
 export const maxDuration = 60;
@@ -22,9 +23,11 @@ const STAGES = [
 ] as const;
 
 export default async function RecoveryPage({ searchParams }: PageProps<"/recovery">) {
-  await requireAthlete();
+  const me = await requireAthlete();
   const { day } = await searchParams;
-  const r = await getRecovery(typeof day === "string" ? day : undefined);
+  const r = await getRecovery(me, typeof day === "string" ? day : undefined);
+  const key = personByAthlete(me)?.key ?? OWNER;
+  const envName = key === OWNER ? "GARMIN_PERSONAL_API_KEY" : `FRIEND_${key.toUpperCase()}_GARMIN_API_KEY`;
 
   if (!r.configured) {
     return (
@@ -33,7 +36,7 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/recover
         <div className="max-w-3xl">
           <Empty>
             Garmin isn’t connected. Create a Personal API key in Garmin Connect (Settings → Personal API) and add it as{" "}
-            <code className="font-semibold text-ink">GARMIN_PERSONAL_API_KEY</code> in the environment variables.
+            <code className="font-semibold text-ink">{envName}</code> in the environment variables.
           </Empty>
         </div>
       </>
@@ -50,7 +53,8 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/recover
         <PageTitle wide sub="Sleep, heart rate and recovery from Garmin.">Recovery</PageTitle>
         <div className="max-w-3xl">
           <Empty>
-            No Garmin data stored yet. Run <code className="font-semibold text-ink">npm run garmin-backfill</code> to import your
+            No Garmin data stored yet. Run{" "}
+            <code className="font-semibold text-ink">npm run garmin-backfill{key === OWNER ? "" : ` -- --as=${key}`}</code> to import your
             history, or tap Sync now in Settings.
           </Empty>
         </div>

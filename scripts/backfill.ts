@@ -3,6 +3,7 @@
  *
  *   npm run backfill            # last 24 months
  *   npm run backfill -- --months=60
+ *   npm run backfill -- --as=ola    # a friend's history (they must have logged in once)
  *   npm run backfill -- --refresh   # also refetch detail + streams for activities
  *                                   # computed with an older METRICS_VERSION
  *                                   # (fills calories, maps, laps, HRRc)
@@ -15,10 +16,14 @@ process.loadEnvFile(".env.local");
 import { strava } from "../src/lib/strava";
 import { upsertSummaries, processPending, refreshAthlete, METRICS_VERSION } from "../src/lib/sync";
 import { db } from "../src/lib/db";
+import { personByKey } from "../src/lib/people";
 
 const months = Number(process.argv.find((a) => a.startsWith("--months="))?.split("=")[1] ?? 24);
 const refresh = process.argv.includes("--refresh");
-const athleteId = Number(process.env.OWNER_ATHLETE_ID);
+const as = process.argv.find((a) => a.startsWith("--as="))?.split("=")[1];
+const person = personByKey(as);
+if (!person) throw new Error(`Unknown person "${as}". Check FRIENDS and FRIEND_${(as ?? "").toUpperCase()}_* in .env.local.`);
+const athleteId = person.athleteId;
 const sleep = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 
 function secondsToNextWindow() {
@@ -27,7 +32,7 @@ function secondsToNextWindow() {
 }
 
 async function main() {
-  console.log(`Refreshing athlete profile and zones…`);
+  console.log(`Backfilling ${person!.key} (athlete ${athleteId}). Refreshing profile and zones…`);
   await refreshAthlete(athleteId);
 
   const after = Math.floor(Date.now() / 1000) - months * 30.4 * 86400;
@@ -43,7 +48,7 @@ async function main() {
   console.log();
 
   const countPending = async () => {
-    const q = db().from("activities").select("id", { count: "exact", head: true });
+    const q = db().from("activities").select("id", { count: "exact", head: true }).eq("athlete_id", athleteId);
     const r = refresh
       ? await q.or(`processed.eq.false,metrics_version.lt.${METRICS_VERSION},metrics_version.is.null`)
       : await q.eq("processed", false);

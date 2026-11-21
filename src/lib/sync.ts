@@ -228,7 +228,7 @@ export async function processActivity(
 export async function refreshRecentDetails(athleteId: number, days = 7) {
   const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
   const recent = check(
-    await db().from("activities").select("id").gte("start_date", since).eq("processed", true),
+    await db().from("activities").select("id").eq("athlete_id", athleteId).gte("start_date", since).eq("processed", true),
   ) as { id: number }[];
   let updated = 0;
   try {
@@ -254,7 +254,12 @@ export async function deleteActivity(activityId: number) {
  */
 export async function syncRecent(athleteId: number, maxProcess = 20) {
   const latest = check(
-    await db().from("activities").select("start_date").order("start_date", { ascending: false }).limit(1),
+    await db()
+      .from("activities")
+      .select("start_date")
+      .eq("athlete_id", athleteId)
+      .order("start_date", { ascending: false })
+      .limit(1),
   ) as { start_date: string }[];
   const after = latest[0]
     ? Math.floor(new Date(latest[0].start_date).getTime() / 1000) - 3 * 86400
@@ -281,7 +286,7 @@ export async function processPending(
   withDetail: boolean,
   scope: "unprocessed" | "outdated" = "unprocessed",
 ) {
-  const base = db().from("activities").select("id, detail_fetched");
+  const base = db().from("activities").select("id, detail_fetched").eq("athlete_id", athleteId);
   const filtered =
     scope === "outdated"
       ? base.or(`processed.eq.false,metrics_version.lt.${METRICS_VERSION},metrics_version.is.null`)

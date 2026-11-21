@@ -8,8 +8,8 @@ import { curveLabel, shortDate } from "@/lib/format";
 export const metadata = { title: "Power" };
 
 export default async function PowerPage() {
-  await requireAthlete();
-  const p = await getPowerData();
+  const me = await requireAthlete();
+  const p = await getPowerData(me);
 
   if (!p.curve.length) {
     return (

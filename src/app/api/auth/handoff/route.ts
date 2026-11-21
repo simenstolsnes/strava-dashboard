@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!athleteId) {
     return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Login hand-off expired. Please try again.")}`, request.url));
   }
-  const res = NextResponse.redirect(new URL("/", request.url));
+  const res = NextResponse.redirect(new URL("/start", request.url));
   res.cookies.set(SESSION_COOKIE, await createSessionToken(athleteId), sessionCookieOptions);
   return res;
 }

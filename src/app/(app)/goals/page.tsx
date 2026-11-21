@@ -8,8 +8,8 @@ import { GoalForm, type Preset } from "./goal-form";
 export const metadata = { title: "Goals" };
 
 /** Example goals grounded in the athlete's current numbers. */
-async function examples(): Promise<Array<{ id: string; title: string; meta: string; preset: Preset }>> {
-  const [power, acts] = await Promise.all([getPowerData(), getActivities()]);
+async function examples(me: number): Promise<Array<{ id: string; title: string; meta: string; preset: Preset }>> {
+  const [power, acts] = await Promise.all([getPowerData(me), getActivities(me)]);
   const out: Array<{ id: string; title: string; meta: string; preset: Preset }> = [];
   const round5 = (x: number) => Math.round(x / 5) * 5;
 
@@ -37,8 +37,8 @@ async function examples(): Promise<Array<{ id: string; title: string; meta: stri
 }
 
 export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
-  await requireAthlete();
-  const [goals, ex, sp] = await Promise.all([getGoals(), examples(), searchParams]);
+  const me = await requireAthlete();
+  const [goals, ex, sp] = await Promise.all([getGoals(me), examples(me), searchParams]);
   const chosen = ex.find((e) => e.id === sp.example)?.preset;
 
   const arms: Arm[] = goals.length

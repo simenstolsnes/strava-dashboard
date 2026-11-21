@@ -22,6 +22,9 @@ Phone / browser ◀────────────────────�
 | **Progress** | Running pace and cycling power at a fixed heart rate over 12 months, monthly hours, aerobic decoupling |
 | **Recovery** | From Garmin: last night's sleep (stages, score), resting HR and VO2 max vs your normal, heart rate through a day, and trends (1 month → all) for sleep, sleep score, resting HR, VO2 max, Body Battery, stress and steps |
 | **Goals** | Volume (km / hours / sessions per week, month or year), power for a duration, FTP, fitness level |
+| **Compare** | You vs friends over 4 weeks, 3 months, this year or 12 months: time in activity, sessions, load, ride distance / time / elevation / speed, average and max power, best 5 / 20 min, FTP, W/kg, sport mix, fitness and form, Garmin recovery averages, and a running-total race chart |
+
+After logging in you land on a choice: **My training** (the pages above, for your own data) or **Compare**.
 
 ### Where the numbers come from
 
@@ -93,7 +96,34 @@ Garmin has no webhooks, so the daily cron re-reads the last 7 days, **Sync now**
 and opening the Recovery page refreshes the last two days when the data is more than 20 minutes old.
 The key is exchanged for a 24-hour token on the server; keys expire after at most a year (Garmin emails you first).
 
-### 6. Deploy to Vercel
+### 6. Friends (optional)
+
+Each friend gets the full dashboard for their own data, and everyone appears on **Compare**.
+Friends use **their own Strava API app** (Strava apps have their own athlete limits and rate limits).
+
+1. The friend opens [strava.com/settings/api](https://www.strava.com/settings/api) and sets
+   **Authorization Callback Domain** to `training-dashboard-bay.vercel.app` (or `localhost` for local testing).
+2. Add to `.env.local` **and** Vercel (Settings → Environment Variables), using a short lowercase key like `ola`:
+   ```
+   FRIENDS=ola
+   FRIEND_OLA_ATHLETE_ID=12345678           # from their profile URL, strava.com/athletes/<id>
+   FRIEND_OLA_STRAVA_CLIENT_ID=…
+   FRIEND_OLA_STRAVA_CLIENT_SECRET=…
+   FRIEND_OLA_GARMIN_API_KEY=…              # optional, for Recovery
+   ```
+   Redeploy after changing Vercel variables.
+3. Send the friend their personal link: **`https://training-dashboard-bay.vercel.app/login?as=ola`**.
+   They approve Strava once; the device remembers the link afterwards. Only the athlete id you configured can log in with it.
+4. Import their history (after they have logged in once):
+   ```bash
+   npm run backfill -- --as=ola
+   npm run garmin-backfill -- --as=ola
+   npm run webhook -- https://training-dashboard-bay.vercel.app --as=ola   # new activities appear instantly
+   ```
+
+The daily cron syncs everyone. Removing a friend from `FRIENDS` logs them out and stops syncing them.
+
+### 7. Deploy to Vercel
 
 Live at **https://training-dashboard-bay.vercel.app** (Vercel project `training-dashboard`, Stockholm region).
 
@@ -119,7 +149,7 @@ Set up once, already done for this project:
 
 The daily cron in `vercel.json` (04:00 UTC) catches anything the webhook missed.
 
-### 7. Install on your phone
+### 8. Install on your phone
 
 - **iPhone (Safari):** open the site → Share → **Add to Home Screen**
 - **Android (Chrome):** open the site → ⋮ → **Install app**
@@ -138,6 +168,8 @@ src/lib/strava.ts       Strava API client with token refresh and rate-limit trac
 src/lib/garmin.ts       Garmin Personal API client + wellness sync
 src/lib/recovery.ts     database → Recovery page data
 src/lib/queries.ts      database → page data (overview, power, progress, goals, advice rules)
+src/lib/compare.ts      database → Compare page (everyone side by side)
+src/lib/people.ts       who may log in (you + FRIENDS) and their Strava / Garmin keys
 src/app/(app)/…         pages
 src/app/api/…           login, webhook, cron, manual sync
 scripts/                backfill + webhook registration

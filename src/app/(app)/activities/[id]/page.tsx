@@ -17,10 +17,10 @@ export const metadata = { title: "Activity" };
 const FEELINGS = ["Rough", "Heavy", "OK", "Good", "Great"];
 
 export default async function ActivityPage({ params }: PageProps<"/activities/[id]">) {
-  await requireAthlete();
+  const me = await requireAthlete();
   const id = Number((await params).id);
   if (!Number.isFinite(id)) notFound();
-  const d = await getActivityDetail(id);
+  const d = await getActivityDetail(me, id);
   if (!d) notFound();
 
   const { activity: a, extra, streams, metrics } = { ...d, metrics: d.activity.metrics };

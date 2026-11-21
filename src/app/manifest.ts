@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Training Dashboard",
     short_name: "Training",
     description: "Personal training dashboard built on Strava data",
-    start_url: "/",
+    start_url: "/start",
     display: "standalone",
     background_color: "#016c66",
     theme_color: "#016c66",

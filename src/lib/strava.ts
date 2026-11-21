@@ -1,5 +1,5 @@
 import { db, check } from "./db";
-import { env } from "./env";
+import { personByAthlete, type Person } from "./people";
 
 const API = "https://www.strava.com/api/v3";
 const OAUTH = "https://www.strava.com/oauth";
@@ -22,9 +22,10 @@ type TokenResponse = {
   athlete?: { id: number; firstname: string; lastname: string };
 };
 
-export function authorizeUrl(redirectUri: string, state: string) {
+/** Each person logs in through their own Strava API app (yours, or the friend's). */
+export function authorizeUrl(person: Person, redirectUri: string, state: string) {
   const params = new URLSearchParams({
-    client_id: env("STRAVA_CLIENT_ID"),
+    client_id: person.strava.clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     approval_prompt: "auto",
@@ -34,13 +35,13 @@ export function authorizeUrl(redirectUri: string, state: string) {
   return `${OAUTH}/authorize?${params}`;
 }
 
-async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
+async function tokenRequest(person: Person, body: Record<string, string>): Promise<TokenResponse> {
   const res = await fetch(`${OAUTH}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      client_id: env("STRAVA_CLIENT_ID"),
-      client_secret: env("STRAVA_CLIENT_SECRET"),
+      client_id: person.strava.clientId,
+      client_secret: person.strava.clientSecret,
       ...body,
     }),
     cache: "no-store",
@@ -61,19 +62,21 @@ export async function saveTokens(athleteId: number, t: TokenResponse) {
   );
 }
 
-export async function exchangeCode(code: string) {
-  return tokenRequest({ code, grant_type: "authorization_code" });
+export async function exchangeCode(person: Person, code: string) {
+  return tokenRequest(person, { code, grant_type: "authorization_code" });
 }
 
 async function accessToken(athleteId: number): Promise<string> {
   const row = check(
     await db().from("strava_tokens").select("*").eq("athlete_id", athleteId).maybeSingle(),
   ) as { access_token: string; refresh_token: string; expires_at: number } | null;
-  if (!row) throw new Error("No Strava tokens stored. Log in to the dashboard first.");
+  if (!row) throw new Error(`No Strava tokens stored for athlete ${athleteId}. Log in to the dashboard first.`);
 
   // Refresh a little before expiry
   if (row.expires_at - 120 > Date.now() / 1000) return row.access_token;
-  const fresh = await tokenRequest({ refresh_token: row.refresh_token, grant_type: "refresh_token" });
+  const person = personByAthlete(athleteId);
+  if (!person) throw new Error(`Athlete ${athleteId} is not configured (see src/lib/people.ts).`);
+  const fresh = await tokenRequest(person, { refresh_token: row.refresh_token, grant_type: "refresh_token" });
   await saveTokens(athleteId, fresh);
   return fresh.access_token;
 }

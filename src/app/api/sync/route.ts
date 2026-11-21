@@ -13,6 +13,6 @@ export async function POST() {
   const result = await syncRecent(athleteId, 25);
   // Also pick up edited descriptions from the last week (Strava sends no webhook for those)
   const detailsRefreshed = await refreshRecentDetails(athleteId, 7);
-  const garmin = garminConfigured() ? await syncGarminRecent(7).catch((e: Error) => ({ garminError: e.message })) : {};
+  const garmin = garminConfigured(athleteId) ? await syncGarminRecent(athleteId, 7).catch((e: Error) => ({ garminError: e.message })) : {};
   return NextResponse.json({ ...result, detailsRefreshed, ...garmin });
 }
