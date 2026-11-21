@@ -99,26 +99,30 @@ The key is exchanged for a 24-hour token on the server; keys expire after at mos
 ### 6. Friends (optional)
 
 Each friend gets the full dashboard for their own data, and everyone appears on **Compare**.
-Friends use **their own Strava API app** (Strava apps have their own athlete limits and rate limits).
+They see exactly the same data either way; there are two ways to connect them:
 
-1. The friend opens [strava.com/settings/api](https://www.strava.com/settings/api) and sets
-   **Authorization Callback Domain** to `training-dashboard-bay.vercel.app` (or `localhost` for local testing).
-2. Add to `.env.local` **and** Vercel (Settings → Environment Variables), using a short lowercase key like `ola`:
+| | Through your Strava app (simplest) | Through their own Strava app |
+|---|---|---|
+| Needs | Room in your app's **athlete capacity** (strava.com/settings/api) | They create an API app with **Authorization Callback Domain** `training-dashboard-bay.vercel.app` |
+| You add | `FRIEND_OLA_ATHLETE_ID` | `FRIEND_OLA_ATHLETE_ID`, `FRIEND_OLA_STRAVA_CLIENT_ID`, `FRIEND_OLA_STRAVA_CLIENT_SECRET` |
+| They log in with | The normal link, `https://training-dashboard-bay.vercel.app/login` | Their personal link `…/login?as=ola` the first time (then the normal one works) |
+| Rate limit | Shared with you (~100 requests / 15 min, 1,000 / day) | Their own |
+| Webhook | Yours already covers them | `npm run webhook -- https://training-dashboard-bay.vercel.app --as=ola` |
+
+1. Add to `.env.local` **and** Vercel (Settings → Environment Variables), using a short lowercase key like `ola`,
+   then redeploy:
    ```
-   FRIENDS=ola
+   FRIENDS=ola                              # comma-separated: FRIENDS=ola,kari
    FRIEND_OLA_ATHLETE_ID=12345678           # from their profile URL, strava.com/athletes/<id>
-   FRIEND_OLA_STRAVA_CLIENT_ID=…
-   FRIEND_OLA_STRAVA_CLIENT_SECRET=…
+   FRIEND_OLA_STRAVA_CLIENT_ID=…            # only with their own app
+   FRIEND_OLA_STRAVA_CLIENT_SECRET=…        # only with their own app
    FRIEND_OLA_GARMIN_API_KEY=…              # optional, for Recovery
    ```
-   Redeploy after changing Vercel variables.
-3. Send the friend their personal link: **`https://training-dashboard-bay.vercel.app/login?as=ola`**.
-   They approve Strava once; the device remembers the link afterwards. Only the athlete id you configured can log in with it.
-4. Import their history (after they have logged in once):
+2. They log in (see the table). Only the athlete ids you configured can get in.
+3. Import their history once they have logged in:
    ```bash
    npm run backfill -- --as=ola
    npm run garmin-backfill -- --as=ola
-   npm run webhook -- https://training-dashboard-bay.vercel.app --as=ola   # new activities appear instantly
    ```
 
 The daily cron syncs everyone. Removing a friend from `FRIENDS` logs them out and stops syncing them.

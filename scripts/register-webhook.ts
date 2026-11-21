@@ -17,6 +17,10 @@ const API = "https://www.strava.com/api/v3/push_subscriptions";
 const as = process.argv.find((a) => a.startsWith("--as="))?.split("=")[1];
 const person = personByKey(as);
 if (!person) throw new Error(`Unknown person "${as}". Check FRIENDS and FRIEND_${(as ?? "").toUpperCase()}_* in .env.local.`);
+if (person.key !== "owner" && !person.ownApp) {
+  console.log(`${person.key} logs in through your Strava app, so your webhook already covers them. Nothing to do.`);
+  process.exit(0);
+}
 const client_id = person.strava.clientId;
 const client_secret = person.strava.clientSecret;
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--as="));

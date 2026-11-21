@@ -3,7 +3,7 @@ import { exchangeCode, saveTokens, SCOPES } from "@/lib/strava";
 import { createHandoffToken, createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 import { isAllowedPreviewOrigin } from "@/lib/preview";
 import { refreshAthlete, syncRecent } from "@/lib/sync";
-import { personByKey } from "@/lib/people";
+import { personByAthlete, personByKey } from "@/lib/people";
 
 export const maxDuration = 300;
 
@@ -26,15 +26,21 @@ export async function GET(request: NextRequest) {
     return fail(request, `Please allow all requested permissions (missing: ${missing.join(", ")}).`);
   }
 
-  // Whose Strava app this login went through; only that person's athlete may use it
-  const person = personByKey(request.cookies.get("oauth_as")?.value);
-  if (!person) return fail(request, "Login expired. Please try again.");
+  // Whose Strava app this login went through
+  const via = personByKey(request.cookies.get("oauth_as")?.value);
+  if (!via) return fail(request, "Login expired. Please try again.");
 
-  const tokens = await exchangeCode(person, code);
-  const athleteId = tokens.athlete?.id;
-  if (!athleteId || athleteId !== person.athleteId) {
-    return fail(request, "This dashboard is private. Ask its owner for your personal login link.");
+  const tokens = await exchangeCode(via, code);
+  // Anyone configured whose tokens belong to this app: you, or a friend without their own app
+  const person = tokens.athlete?.id ? personByAthlete(tokens.athlete.id) : null;
+  if (!person) return fail(request, "This dashboard is private. Ask its owner to add you.");
+  if (person.strava.clientId !== via.strava.clientId) {
+    // A friend with their own app came in through the normal link: go round again through theirs
+    const res = NextResponse.redirect(new URL(`/api/auth/login?as=${person.key}`, request.url));
+    res.cookies.set("login_as", person.key, { ...sessionCookieOptions, maxAge: 60 * 60 * 24 * 400 });
+    return res;
   }
+  const athleteId = person.athleteId;
 
   await saveTokens(athleteId, tokens);
 
