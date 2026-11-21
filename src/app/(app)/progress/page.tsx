@@ -15,8 +15,8 @@ function driftLabel(v: number) {
 }
 
 export default async function ProgressPage() {
-  await requireAthlete();
-  const [p, profile] = await Promise.all([getProgress(), getProfile()]);
+  const me = await requireAthlete();
+  const [p, profile] = await Promise.all([getProgress(me), getProfile(me)]);
   const z2min = profile.hrZones?.[1]?.min;
 
   const whyHr = (

@@ -7,8 +7,8 @@ import { SyncButton } from "./sync-button";
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  await requireAthlete();
-  const [profile, ftp, sync] = await Promise.all([getProfile(), getFtp(), getSyncStatus()]);
+  const me = await requireAthlete();
+  const [profile, ftp, sync] = await Promise.all([getProfile(me), getFtp(me), getSyncStatus(me)]);
 
   return (
     <>

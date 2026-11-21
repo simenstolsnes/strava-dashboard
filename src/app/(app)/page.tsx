@@ -13,8 +13,8 @@ export const metadata = { title: "Today" };
 const hm = (s: number) => `${Math.floor(s / 3600)}:${String(Math.round((s % 3600) / 60)).padStart(2, "0")}`;
 
 export default async function TodayPage() {
-  await requireAthlete();
-  const [o, profile, goals] = await Promise.all([getOverview(), getProfile(), getGoals()]);
+  const me = await requireAthlete();
+  const [o, profile, goals] = await Promise.all([getOverview(me), getProfile(me), getGoals(me)]);
   const first = profile.name.split(" ")[0] || "there";
   const date = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Oslo" });
 

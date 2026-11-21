@@ -41,19 +41,21 @@ function median(xs: number[]) {
  * before rendering, but never hold the page for more than 4 s: a slower sync finishes in the
  * background and shows on the next visit.
  */
-async function refreshIfStale() {
-  const last = await lastGarminSync();
+async function refreshIfStale(athleteId: number) {
+  const last = await lastGarminSync(athleteId);
   if (last && Date.now() - last.getTime() < 20 * 60 * 1000) return;
-  const run = syncGarminRecent(2).catch((e) => console.error("Garmin refresh failed:", e));
+  const run = syncGarminRecent(athleteId, 2).catch((e) => console.error("Garmin refresh failed:", e));
   const done = await Promise.race([run.then(() => true), new Promise<boolean>((r) => setTimeout(() => r(false), 4000))]);
   if (!done) after(() => run);
 }
 
-export async function getRecovery(daySel?: string) {
-  if (!garminConfigured()) return { configured: false as const };
-  await refreshIfStale();
+export async function getRecovery(athleteId: number, daySel?: string) {
+  if (!garminConfigured(athleteId)) return { configured: false as const };
+  await refreshIfStale(athleteId);
 
-  const rows: GarminDay[] = ((await selectAll<GarminDay>(() => db().from("garmin_daily").select("*").order("date"))) as GarminDay[]).map((r) => ({
+  const rows: GarminDay[] = ((await selectAll<GarminDay>(() =>
+    db().from("garmin_daily").select("*").eq("athlete_id", athleteId).order("date"),
+  )) as GarminDay[]).map((r) => ({
     ...r,
     resting_hr: plausibleRhr(r.resting_hr, r.min_hr),
   }));
@@ -110,13 +112,13 @@ export async function getRecovery(daySel?: string) {
 
   // Heart rate through one day: yesterday unless a day is picked
   const hrDates = (
-    check(await db().from("garmin_heart_rate").select("date").order("date", { ascending: false }).limit(60)) as { date: string }[]
+    check(await db().from("garmin_heart_rate").select("date").eq("athlete_id", athleteId).order("date", { ascending: false }).limit(60)) as { date: string }[]
   ).map((r) => r.date);
   const yesterday = addDays(end, -1);
   const hrDate =
     daySel && hrDates.includes(daySel) ? daySel : hrDates.includes(yesterday) ? yesterday : (hrDates.find((d) => d < end) ?? hrDates[0] ?? null);
   const hrRow = hrDate
-    ? (check(await db().from("garmin_heart_rate").select("*").eq("date", hrDate).maybeSingle()) as {
+    ? (check(await db().from("garmin_heart_rate").select("*").eq("athlete_id", athleteId).eq("date", hrDate).maybeSingle()) as {
         date: string;
         samples: [number, number][];
         resting_hr: number | null;
@@ -155,6 +157,6 @@ export async function getRecovery(daySel?: string) {
     vo2Ride: vo2("vo2max_ride"),
     today: byDate.get(end) ?? null,
     hrDay,
-    lastSync: (await lastGarminSync())?.toISOString() ?? null,
+    lastSync: (await lastGarminSync(athleteId))?.toISOString() ?? null,
   };
 }

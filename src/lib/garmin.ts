@@ -1,8 +1,9 @@
 import { db, check } from "./db";
 import { addDays, today } from "./time";
+import { personByAthlete } from "./people";
 
 /**
- * Garmin Connect Personal API (one user, read-only).
+ * Garmin Connect Personal API (read-only, one key per person; see people.ts).
  * The API key from Garmin Connect is exchanged for a 24 h bearer token; there is no refresh token,
  * so a new one is requested when the cached one is close to expiry.
  */
@@ -13,14 +14,15 @@ const TOKEN_PATH = "/personalapitoken-service/personal-api/personal-api-key/toke
 /** Sleep summaries reject long ranges (100 days fails), so every range is fetched in chunks. */
 const CHUNK_DAYS = 28;
 
-export const garminConfigured = () => Boolean(process.env.GARMIN_PERSONAL_API_KEY);
+export const garminConfigured = (athleteId: number) => Boolean(personByAthlete(athleteId)?.garminKey);
 
-let cached: { token: string; exp: number } | null = null;
+const cache = new Map<number, { token: string; exp: number }>();
 
-async function token(): Promise<string> {
+async function token(athleteId: number): Promise<string> {
+  const cached = cache.get(athleteId);
   if (cached && cached.exp - 3600 > Date.now() / 1000) return cached.token;
-  const key = process.env.GARMIN_PERSONAL_API_KEY;
-  if (!key) throw new Error("Missing environment variable GARMIN_PERSONAL_API_KEY");
+  const key = personByAthlete(athleteId)?.garminKey;
+  if (!key) throw new Error(`No Garmin API key configured for athlete ${athleteId}`);
   const res = await fetch(BASE + TOKEN_PATH, { method: "POST", headers: { Authorization: `ApiKey ${key}` }, cache: "no-store" });
   // Never echo the body: on success it is the token itself.
   if (!res.ok) throw new Error(`Garmin token request failed (${res.status}). Check that the API key is valid and not expired.`);
@@ -37,13 +39,13 @@ async function token(): Promise<string> {
   } catch {
     // not a JWT we can read; assume ~24 h
   }
-  cached = { token: t, exp };
+  cache.set(athleteId, { token: t, exp });
   return t;
 }
 
-export async function garminGet<T>(path: string): Promise<T> {
-  const res = await fetch(BASE + path, { headers: { Authorization: `Bearer ${await token()}` }, cache: "no-store" });
-  if (res.status === 401) cached = null;
+export async function garminGet<T>(athleteId: number, path: string): Promise<T> {
+  const res = await fetch(BASE + path, { headers: { Authorization: `Bearer ${await token(athleteId)}` }, cache: "no-store" });
+  if (res.status === 401) cache.delete(athleteId);
   if (!res.ok) throw new Error(`Garmin GET ${path.split("?")[0]} failed (${res.status})`);
   const text = await res.text();
   return (text ? JSON.parse(text) : null) as T;
@@ -116,11 +118,11 @@ export type GarminDay = {
 };
 
 /** Fetch one chunk (≤ 28 days) of daily data and merge it into one row per date. */
-async function fetchChunk(start: string, end: string): Promise<GarminDay[]> {
+async function fetchChunk(athleteId: number, start: string, end: string): Promise<GarminDay[]> {
   const [sleep, summaries, vo2] = await Promise.all([
-    garminGet<SleepSummary[]>(`/sleep-service/sleep/dailySleepSummariesByDate?startDate=${start}&endDate=${end}`),
-    garminGet<{ data?: DailySummary[] }>(`/usersummary-service/v2/dailysummaries?startDate=${start}&endDate=${end}`),
-    garminGet<Vo2Day[]>(`/metrics-service/metrics/maxmet/daily/${start}/${end}`),
+    garminGet<SleepSummary[]>(athleteId, `/sleep-service/sleep/dailySleepSummariesByDate?startDate=${start}&endDate=${end}`),
+    garminGet<{ data?: DailySummary[] }>(athleteId, `/usersummary-service/v2/dailysummaries?startDate=${start}&endDate=${end}`),
+    garminGet<Vo2Day[]>(athleteId, `/metrics-service/metrics/maxmet/daily/${start}/${end}`),
   ]);
 
   const days = new Map<string, GarminDay>();
@@ -171,15 +173,15 @@ async function fetchChunk(start: string, end: string): Promise<GarminDay[]> {
 }
 
 /** Store the days in [start, end]; returns how many days had data. */
-export async function syncGarminDays(start: string, end: string): Promise<number> {
+export async function syncGarminDays(athleteId: number, start: string, end: string): Promise<number> {
   let stored = 0;
   for (let from = start; from <= end; from = addDays(from, CHUNK_DAYS)) {
     const to = addDays(from, CHUNK_DAYS - 1) < end ? addDays(from, CHUNK_DAYS - 1) : end;
-    const rows = await fetchChunk(from, to);
+    const rows = await fetchChunk(athleteId, from, to);
     if (rows.length) {
       // Every row comes from the same full fetch, so a missing field really is missing at Garmin
       const now = new Date().toISOString();
-      check(await db().from("garmin_daily").upsert(rows.map((r) => ({ ...r, updated_at: now }))));
+      check(await db().from("garmin_daily").upsert(rows.map((r) => ({ ...r, athlete_id: athleteId, updated_at: now }))));
       stored += rows.length;
     }
   }
@@ -187,12 +189,13 @@ export async function syncGarminDays(start: string, end: string): Promise<number
 }
 
 /** Heart rate through one day (about every 2 minutes). */
-export async function syncGarminHeartRate(date: string): Promise<boolean> {
-  const hr = await garminGet<DailyHeartRate>(`/wellness-service/wellness/dailyHeartRate?date=${date}`);
+export async function syncGarminHeartRate(athleteId: number, date: string): Promise<boolean> {
+  const hr = await garminGet<DailyHeartRate>(athleteId, `/wellness-service/wellness/dailyHeartRate?date=${date}`);
   const samples = (hr?.heartRateValues ?? []).filter((s): s is [number, number] => s[1] != null && s[1] > 0);
   if (!samples.length) return false;
   check(
     await db().from("garmin_heart_rate").upsert({
+      athlete_id: athleteId,
       date,
       samples,
       resting_hr: positive(hr.restingHeartRate),
@@ -203,17 +206,17 @@ export async function syncGarminHeartRate(date: string): Promise<boolean> {
 }
 
 /** Recent days: re-read the last week (late watch syncs, partial days) and today's/yesterday's heart rate. */
-export async function syncGarminRecent(days = 7) {
+export async function syncGarminRecent(athleteId: number, days = 7) {
   const end = today();
-  const stored = await syncGarminDays(addDays(end, -(days - 1)), end);
-  const [y, t] = await Promise.all([syncGarminHeartRate(addDays(end, -1)), syncGarminHeartRate(end)]);
+  const stored = await syncGarminDays(athleteId, addDays(end, -(days - 1)), end);
+  const [y, t] = await Promise.all([syncGarminHeartRate(athleteId, addDays(end, -1)), syncGarminHeartRate(athleteId, end)]);
   return { garminDays: stored, garminHeartRateDays: Number(y) + Number(t) };
 }
 
 /** When Garmin data was last stored, or null if never. */
-export async function lastGarminSync(): Promise<Date | null> {
+export async function lastGarminSync(athleteId: number): Promise<Date | null> {
   const row = check(
-    await db().from("garmin_daily").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    await db().from("garmin_daily").select("updated_at").eq("athlete_id", athleteId).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ) as { updated_at: string } | null;
   return row ? new Date(row.updated_at) : null;
 }

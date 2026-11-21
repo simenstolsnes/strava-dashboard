@@ -8,12 +8,14 @@ const pick = <T extends string>(v: FormDataEntryValue | null, allowed: readonly 
   allowed.includes(v as T) ? (v as T) : fallback;
 
 export async function createGoal(formData: FormData) {
-  if (!(await currentAthlete())) throw new Error("Not logged in");
+  const athleteId = await currentAthlete();
+  if (!athleteId) throw new Error("Not logged in");
   const kind = pick(formData.get("kind"), ["volume", "power_best", "ftp", "fitness"] as const, "volume");
   const target = Number(formData.get("target"));
   if (!Number.isFinite(target) || target <= 0) throw new Error("Target must be a positive number");
 
   const row: Record<string, unknown> = {
+    athlete_id: athleteId,
     title: String(formData.get("title") || "").slice(0, 80),
     kind,
     target,
@@ -42,7 +44,8 @@ export async function createGoal(formData: FormData) {
 }
 
 export async function deleteGoal(id: string) {
-  if (!(await currentAthlete())) throw new Error("Not logged in");
-  check(await db().from("goals").delete().eq("id", id));
+  const athleteId = await currentAthlete();
+  if (!athleteId) throw new Error("Not logged in");
+  check(await db().from("goals").delete().eq("id", id).eq("athlete_id", athleteId));
   revalidatePath("/goals");
 }

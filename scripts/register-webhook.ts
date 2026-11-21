@@ -5,13 +5,22 @@
  *   npm run webhook -- https://your-app.vercel.app
  *   npm run webhook -- --list
  *   npm run webhook -- --delete <id>
+ *
+ * Add --as=ola to do the same for a friend's Strava app (each app has its own subscription):
+ *   npm run webhook -- https://your-app.vercel.app --as=ola
  */
 process.loadEnvFile(".env.local");
 
+import { personByKey } from "../src/lib/people";
+
 const API = "https://www.strava.com/api/v3/push_subscriptions";
-const client_id = process.env.STRAVA_CLIENT_ID!;
-const client_secret = process.env.STRAVA_CLIENT_SECRET!;
-const arg = process.argv[2];
+const as = process.argv.find((a) => a.startsWith("--as="))?.split("=")[1];
+const person = personByKey(as);
+if (!person) throw new Error(`Unknown person "${as}". Check FRIENDS and FRIEND_${(as ?? "").toUpperCase()}_* in .env.local.`);
+const client_id = person.strava.clientId;
+const client_secret = person.strava.clientSecret;
+const args = process.argv.slice(2).filter((a) => !a.startsWith("--as="));
+const arg = args[0];
 
 async function main() {
   if (!arg || arg === "--list") {
@@ -20,7 +29,7 @@ async function main() {
     return;
   }
   if (arg === "--delete") {
-    const id = process.argv[3];
+    const id = args[1];
     const res = await fetch(`${API}/${id}?${new URLSearchParams({ client_id, client_secret })}`, { method: "DELETE" });
     console.log(res.status === 204 ? `Deleted subscription ${id}` : await res.text());
     return;

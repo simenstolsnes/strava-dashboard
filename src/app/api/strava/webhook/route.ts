@@ -1,7 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { deleteActivity, processActivity } from "@/lib/sync";
 import { db } from "@/lib/db";
-import { ownerAthleteId } from "@/lib/env";
+import { personByAthlete } from "@/lib/people";
 
 export const maxDuration = 300;
 
@@ -22,11 +22,15 @@ type WebhookEvent = {
   updates?: Record<string, string>;
 };
 
-/** Strava posts here on every new/edited/deleted activity. Must answer within 2 s. */
+/**
+ * Strava posts here on every new/edited/deleted activity, for every app subscribed (yours and
+ * each friend's). Must answer within 2 s.
+ */
 export async function POST(request: NextRequest) {
   const event = (await request.json()) as WebhookEvent;
-  const owner = ownerAthleteId();
-  if (event.owner_id !== owner) return NextResponse.json({ ok: true });
+  const person = personByAthlete(event.owner_id);
+  if (!person) return NextResponse.json({ ok: true });
+  const owner = person.athleteId;
 
   after(async () => {
     if (event.object_type === "athlete") {

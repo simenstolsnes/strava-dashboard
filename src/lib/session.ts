@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { personByAthlete } from "./people";
 
 export const SESSION_COOKIE = "session";
 const MAX_AGE = 60 * 60 * 24 * 60; // 60 days
@@ -13,13 +14,13 @@ export async function createSessionToken(athleteId: number) {
     .sign(key());
 }
 
-/** Returns the athlete id if the token is valid and belongs to the owner. */
+/** Returns the athlete id if the token is valid and belongs to someone configured (you or a friend). */
 export async function verifySessionToken(token: string | undefined): Promise<number | null> {
   if (!token || (process.env.SESSION_SECRET ?? "").length < 32) return null;
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
     const id = Number(payload.athleteId);
-    return id === Number(process.env.OWNER_ATHLETE_ID) ? id : null;
+    return personByAthlete(id) ? id : null;
   } catch {
     return null;
   }
@@ -44,7 +45,7 @@ export async function verifyHandoffToken(token: string | null, audience: string)
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"], audience });
     const id = Number(payload.athleteId);
-    return payload.purpose === "preview-handoff" && id === Number(process.env.OWNER_ATHLETE_ID) ? id : null;
+    return payload.purpose === "preview-handoff" && personByAthlete(id) ? id : null;
   } catch {
     return null;
   }

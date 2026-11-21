@@ -126,8 +126,8 @@ const toActivity = ({ activity_metrics, ...rest }: Row): Activity => ({ ...rest,
 
 // ---------- Base queries (deduplicated per request) ----------
 
-export const getProfile = cache(async (): Promise<Profile> => {
-  const row = check(await db().from("athlete").select("*").limit(1).maybeSingle()) as {
+export const getProfile = cache(async (athleteId: number): Promise<Profile> => {
+  const row = check(await db().from("athlete").select("*").eq("id", athleteId).maybeSingle()) as {
     firstname: string;
     lastname: string;
     weight: number | null;
@@ -147,21 +147,21 @@ export const getProfile = cache(async (): Promise<Profile> => {
 });
 
 /** All activities with metrics, newest first. */
-export const getActivities = cache(async (): Promise<Activity[]> => {
+export const getActivities = cache(async (athleteId: number): Promise<Activity[]> => {
   const cols = `${BASE_COLS},activity_metrics(${METRIC_COLS},power_curve)`;
   const rows = await selectAll<Row>(() =>
-    db().from("activities").select(cols).order("start_date", { ascending: false }).order("id"),
+    db().from("activities").select(cols).eq("athlete_id", athleteId).order("start_date", { ascending: false }).order("id"),
   );
   return rows.map(toActivity);
 });
 
 /** FTP in use: your override, then Strava's, then estimated from the last 90 days. */
-export const getFtp = cache(async (): Promise<{ ftp: number | null; source: string }> => {
-  const profile = await getProfile();
+export const getFtp = cache(async (athleteId: number): Promise<{ ftp: number | null; source: string }> => {
+  const profile = await getProfile(athleteId);
   if (profile.ftpOverride) return { ftp: profile.ftpOverride, source: "set in settings" };
   if (profile.stravaFtp) return { ftp: profile.stravaFtp, source: "from Strava" };
   const since = addDays(today(), -90);
-  const recent = (await getActivities()).filter((a) => day(a) >= since);
+  const recent = (await getActivities(athleteId)).filter((a) => day(a) >= since);
   const eftp = estimateFtp(bestCurve(recent.map((a) => a.metrics?.power_curve)));
   return { ftp: eftp, source: "estimated (95% of best 20 min, 90 days)" };
 });
@@ -238,8 +238,8 @@ function buildAdvice(series: FitnessPoint[], lowShare: number | null, sinceHard:
   return advice;
 }
 
-export async function getOverview() {
-  const [acts, { ftp }] = await Promise.all([getActivities(), getFtp()]);
+export async function getOverview(athleteId: number) {
+  const [acts, { ftp }] = await Promise.all([getActivities(athleteId), getFtp(athleteId)]);
   const t = today();
   const series = fitnessSeries(
     acts.map((a) => ({ date: day(a), load: loadOf(a, ftp) })),
@@ -335,8 +335,8 @@ export async function getOverview() {
 
 export type EffortHolder = { id: number; name: string; date: string };
 
-export async function getPowerData() {
-  const [acts, profile, ftpInfo] = await Promise.all([getActivities(), getProfile(), getFtp()]);
+export async function getPowerData(athleteId: number) {
+  const [acts, profile, ftpInfo] = await Promise.all([getActivities(athleteId), getProfile(athleteId), getFtp(athleteId)]);
   const withPower = acts.filter((a) => a.metrics?.power_curve && a.device_watts);
   const t = today();
   const between = (from: number, to: number) =>
@@ -408,8 +408,8 @@ export async function getPowerData() {
 
 // ---------- Progress ----------
 
-export async function getProgress() {
-  const [acts, profile] = await Promise.all([getActivities(), getProfile()]);
+export async function getProgress(athleteId: number) {
+  const [acts, profile] = await Promise.all([getActivities(athleteId), getProfile(athleteId)]);
   const t = today();
   // Reference HR for "output at a fixed heart rate": top of zone 2, else 145.
   const refHr = profile.hrZones?.[1]?.max && profile.hrZones[1].max > 0 ? profile.hrZones[1].max : 145;
@@ -501,10 +501,14 @@ export type GoalProgress = Goal & {
   left: string;
 };
 
-export async function getGoals(): Promise<GoalProgress[]> {
-  const goals = check(await db().from("goals").select("*").order("created_at")) as Goal[];
+export async function getGoals(athleteId: number): Promise<GoalProgress[]> {
+  const goals = check(await db().from("goals").select("*").eq("athlete_id", athleteId).order("created_at")) as Goal[];
   if (!goals.length) return [];
-  const [acts, power, overview] = await Promise.all([getActivities(), getPowerData(), getOverview()]);
+  const [acts, power, overview] = await Promise.all([
+    getActivities(athleteId),
+    getPowerData(athleteId),
+    getOverview(athleteId),
+  ]);
   const t = today();
 
   return goals.map((g) => {
@@ -571,8 +575,8 @@ export async function getGoals(): Promise<GoalProgress[]> {
 
 // ---------- Activities ----------
 
-export async function getActivityList(group: SportGroup | null) {
-  const acts = await getActivities();
+export async function getActivityList(athleteId: number, group: SportGroup | null) {
+  const acts = await getActivities(athleteId);
   return group ? acts.filter((a) => sportGroup(a.sport_type) === group) : acts;
 }
 
@@ -600,12 +604,13 @@ export type Lap = {
   average_cadence?: number | null;
 };
 
-export async function getActivityDetail(id: number) {
+export async function getActivityDetail(athleteId: number, id: number) {
   const row = check(
     await db()
       .from("activities")
       .select(`${BASE_COLS},description,laps,average_cadence,max_watts,map_polyline,activity_metrics(${METRIC_COLS},power_curve),activity_streams(data),notes(feeling,text)`)
       .eq("id", id)
+      .eq("athlete_id", athleteId)
       .maybeSingle(),
   ) as
     | (Row & {
@@ -621,7 +626,11 @@ export async function getActivityDetail(id: number) {
   if (!row) return null;
   const { activity_streams, notes, description, map_polyline, laps, average_cadence, max_watts, ...rest } = row;
   const activity = toActivity(rest as Row);
-  const [{ ftp }, profile, power] = await Promise.all([getFtp(), getProfile(), getPowerData()]);
+  const [{ ftp }, profile, power] = await Promise.all([
+    getFtp(athleteId),
+    getProfile(athleteId),
+    getPowerData(athleteId),
+  ]);
   const best90 = Object.fromEntries(power.curve.map((c) => [c.seconds, c.last90]));
   return {
     activity,
@@ -645,11 +654,17 @@ export async function getActivityDetail(id: number) {
   };
 }
 
-export async function getSyncStatus() {
+export async function getSyncStatus(athleteId: number) {
+  const mine = () => db().from("activities").select("id", { count: "exact", head: true }).eq("athlete_id", athleteId);
   const [count, pending, latest] = await Promise.all([
-    db().from("activities").select("id", { count: "exact", head: true }),
-    db().from("activities").select("id", { count: "exact", head: true }).eq("processed", false),
-    db().from("activities").select("updated_at,start_date_local,name").order("updated_at", { ascending: false }).limit(1),
+    mine(),
+    mine().eq("processed", false),
+    db()
+      .from("activities")
+      .select("updated_at,start_date_local,name")
+      .eq("athlete_id", athleteId)
+      .order("updated_at", { ascending: false })
+      .limit(1),
   ]);
   return {
     total: count.count ?? 0,
