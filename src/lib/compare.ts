@@ -162,12 +162,22 @@ async function statsFor(athleteId: number, isMe: boolean, from: string, to: stri
   };
 }
 
-/** Everyone configured who has logged in at least once (so has a profile), the viewer first. */
+/**
+ * Who the viewer is compared with, the viewer first: everyone configured who has logged in at
+ * least once (so has a profile) and has comparison on. It goes both ways: a viewer who turned
+ * it off sees only themselves.
+ */
 export async function getConnected(viewer: number) {
-  const rows = check(await db().from("athlete").select("id,firstname")) as { id: number; firstname: string | null }[];
+  const rows = check(await db().from("athlete").select("*")) as {
+    id: number;
+    firstname: string | null;
+    compare_enabled: boolean | null;
+  }[];
+  const on = new Set(rows.filter((r) => r.compare_enabled !== false).map((r) => Number(r.id)));
   const names = new Map(rows.map((r) => [Number(r.id), r.firstname ?? ""]));
   return people()
     .filter((p) => names.has(p.athleteId))
+    .filter((p) => p.athleteId === viewer || (on.has(viewer) && on.has(p.athleteId)))
     .map((p) => ({ athleteId: p.athleteId, name: names.get(p.athleteId) || p.key, isMe: p.athleteId === viewer }))
     .sort((a, b) => Number(b.isMe) - Number(a.isMe));
 }

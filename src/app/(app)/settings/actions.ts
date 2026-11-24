@@ -13,3 +13,12 @@ export async function saveFtp(formData: FormData) {
   check(await db().from("athlete").update({ ftp_override: ftp }).eq("id", athleteId));
   revalidatePath("/", "layout");
 }
+
+export async function saveCompare(formData: FormData) {
+  const athleteId = await currentAthlete();
+  if (!athleteId) throw new Error("Not logged in");
+  const value = formData.get("compare");
+  if (value !== "on" && value !== "off") throw new Error("Invalid choice");
+  check(await db().from("athlete").update({ compare_enabled: value === "on" }).eq("id", athleteId));
+  revalidatePath("/", "layout");
+}
