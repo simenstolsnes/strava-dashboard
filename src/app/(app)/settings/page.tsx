@@ -1,7 +1,7 @@
 import { requireAthlete } from "@/lib/auth";
 import { getFtp, getProfile, getSyncStatus } from "@/lib/queries";
 import { Card, PageTitle } from "@/components/ui";
-import { saveFtp } from "./actions";
+import { saveCompare, saveFtp } from "./actions";
 import { SyncButton } from "./sync-button";
 
 export const metadata = { title: "Settings" };
@@ -28,6 +28,20 @@ export default async function SettingsPage() {
           <button className="rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink">Save</button>
         </form>
         <p className="mt-2 text-xs text-muted">Leave empty to use Strava’s FTP, or the estimate if none is set.</p>
+      </Card>
+
+      <Card title="Comparison" subtitle={profile.compareEnabled ? "On" : "Off"}>
+        <p className="mb-3 text-sm text-ink-2">
+          {profile.compareEnabled
+            ? "Others on this dashboard can see your training, power and Garmin averages on Compare. If you turn it off, they no longer see your data and you no longer see theirs."
+            : "Others can’t see your data on Compare, and you can’t see theirs. Turn it on to take part again."}
+        </p>
+        <form action={saveCompare}>
+          <input type="hidden" name="compare" value={profile.compareEnabled ? "off" : "on"} />
+          <button className="rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink">
+            {profile.compareEnabled ? "Turn off comparison" : "Turn on comparison"}
+          </button>
+        </form>
       </Card>
 
       <Card

@@ -99,7 +99,8 @@ The key is exchanged for a 24-hour token on the server; keys expire after at mos
 
 ### 6. Friends (optional)
 
-Each friend gets the full dashboard for their own data, and everyone appears on **Compare**.
+Each friend gets the full dashboard for their own data, and everyone appears on **Compare**. Anyone can turn
+comparison off in Settings: others then don't see their data, and they don't see others'.
 They see exactly the same data either way; there are two ways to connect them:
 
 | | Through your Strava app (simplest) | Through their own Strava app |

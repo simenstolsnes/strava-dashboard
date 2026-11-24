@@ -57,6 +57,8 @@ export type Profile = {
   ftpOverride: number | null;
   hrZones: Zone[] | null;
   powerZones: Zone[] | null;
+  /** Takes part in Compare: visible to the others, and sees them */
+  compareEnabled: boolean;
 };
 
 // ---------- Helpers ----------
@@ -140,6 +142,7 @@ export const getProfile = cache(async (athleteId: number): Promise<Profile> => {
     ftp_override: number | null;
     hr_zones: Zone[] | null;
     power_zones: Zone[] | null;
+    compare_enabled: boolean | null;
   } | null;
   return {
     name: row ? `${row.firstname} ${row.lastname}` : "",
@@ -148,6 +151,7 @@ export const getProfile = cache(async (athleteId: number): Promise<Profile> => {
     ftpOverride: row?.ftp_override ?? null,
     hrZones: row?.hr_zones ?? null,
     powerZones: row?.power_zones ?? null,
+    compareEnabled: row?.compare_enabled ?? true,
   };
 });
 

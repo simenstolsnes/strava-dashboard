@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { requireAthlete } from "@/lib/auth";
 import { getComparison, isPeriod, PERIODS, type PersonStats } from "@/lib/compare";
-import { GROUP_LABEL, type SportGroup } from "@/lib/queries";
+import { getProfile, GROUP_LABEL, type SportGroup } from "@/lib/queries";
 import { hmin, hours } from "@/lib/format";
 import { Card, Empty, PageTitle, SPORT_COLOR } from "@/components/ui";
 import { RaceChart, type RaceRow } from "@/components/compare-charts";
@@ -69,6 +69,21 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const me = await requireAthlete();
   const { p } = await searchParams;
   const period = isPeriod(p) ? p : "4w";
+  if (!(await getProfile(me)).compareEnabled) {
+    return (
+      <>
+        <PageTitle wide sub="You against your training partners.">Compare</PageTitle>
+        <div className="max-w-3xl">
+          <Empty>
+            You have turned off comparison, so others can’t see your data and you can’t see theirs.{" "}
+            <Link href="/settings" className="font-medium text-teal hover:underline">
+              Turn it on in Settings
+            </Link>
+          </Empty>
+        </div>
+      </>
+    );
+  }
   const c = await getComparison(me, period);
   const entries: Entry[] = c.people.map((p, i) => ({ p, color: COLORS[i % COLORS.length] }));
   const names = c.people.map((p) => p.name);
@@ -97,7 +112,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
         <div className="max-w-3xl">
           <Empty>
             Nobody to compare with yet. A friend shows up here once they have logged in through their personal link and their
-            activities are imported.
+            activities are imported, unless they have turned off comparison.
           </Empty>
         </div>
       </>
