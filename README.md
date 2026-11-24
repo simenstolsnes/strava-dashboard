@@ -36,7 +36,8 @@ After logging in you land on a choice: **My training** (the pages above, for you
   Strava's Fitness & Freshness but is our own estimate, so the values will differ somewhat.
 - **From Garmin:** sleep, sleep score, resting / daily heart rate, VO2 max (Garmin's estimate), Body Battery, stress, steps.
   "Your usual" and "normal" are medians of the previous 30 days, calculated here.
-- **eFTP:** 95 % of best 20-minute power in the last 90 days (used only when no FTP is set).
+- **eFTP:** rides with a power meter only. Best 5 / 10 / 20 / 30 min power in the last 90 days (all time if none) ×
+  0.775 / 0.91 / 0.95 / 0.99; the highest estimate wins. Used as FTP only when none is set. The Power page shows the calculation.
 
 ## Setup
 

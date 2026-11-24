@@ -21,9 +21,9 @@ export default async function PowerPage() {
   }
 
   const ftp = p.ftp.ftp;
-  const best20Prev = p.curve.find((c) => c.seconds === 1200)?.prev90 ?? null;
-  const best20 = p.curve.find((c) => c.seconds === 1200)?.last90 ?? null;
-  const change = best20 && best20Prev ? best20 - best20Prev : null;
+  const eftp = p.eftp;
+  const change = eftp?.period === "last 90 days" && p.eftpPrev90 ? eftp.ftp - p.eftpPrev90 : null;
+  const pct = (factor: number) => `${+(factor * 100).toFixed(1)} %`;
 
   return (
     <>
@@ -46,14 +46,58 @@ export default async function PowerPage() {
             hint={p.weight ? `at ${p.weight} kg` : "add weight in Strava"}
           />
           <Stat
-            label="eFTP (90 d)"
-            info="Estimated FTP: 95 % of your best 20-minute power in the last 90 days. An estimate only; a proper test or a hard 20-minute effort makes it sharper. The arrow compares your best 20 minutes with the 90 days before."
-            value={p.eftp ?? "–"}
+            label={eftp?.period === "all time" ? "eFTP (all time)" : "eFTP (90 d)"}
+            info="Estimated FTP from cycling only; runs and other sports never count. Your best 5, 10, 20 and 30 minutes are each multiplied by a factor, and the highest result is used. See the calculation below. The arrow compares with the same estimate for the 90 days before."
+            value={eftp?.ftp ?? "–"}
             unit="W"
-            delta={change !== null ? { text: `${Math.abs(change)} W on 20 min vs prior 90 d`, good: change === 0 ? null : change > 0 } : undefined}
+            delta={change !== null ? { text: `${Math.abs(change)} W vs prior 90 d`, good: change === 0 ? null : change > 0 } : undefined}
           />
         </div>
       </Card>
+
+      {eftp && (
+        <Card
+          title="How your eFTP is estimated"
+          subtitle={`Best ride efforts, ${eftp.period}. The highest estimate is used.`}
+          info="Only rides with a power meter count. The factors are midpoints of the usual ranges: 5 min 75–80 %, 10 min 90–92 %, 20 min 95 % (the Coggan/Allen standard), 30 min 98–100 %. Best efforts are rarely all-out tests, so your real FTP may differ."
+        >
+          <p className="mb-3 text-sm text-ink-2">
+            <span className="num font-semibold text-ink">{eftp.ftp} W</span> = {pct(eftp.factor)} of your best {eftp.seconds / 60} min (
+            {eftp.watts} W), from{" "}
+            <Link href={`/activities/${eftp.ride.id}`} className="font-medium text-teal hover:underline">
+              {eftp.ride.name}
+            </Link>
+            , {shortDate(eftp.ride.date)}.
+            {eftp.seconds === 300 &&
+              " This is the least certain basis: 5 minutes mostly measures VO2max, not threshold. A hard 20 or 30 minutes gives a better estimate."}
+          </p>
+          <table className="num w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted">
+                <th className="pb-2 font-normal">Duration</th>
+                <th className="pb-2 font-normal">Best power</th>
+                <th className="pb-2 font-normal">Factor</th>
+                <th className="pb-2 font-normal">FTP estimate</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {eftp.candidates.map((c) => {
+                const used = c.seconds === eftp.seconds;
+                return (
+                  <tr key={c.seconds} className={used ? "font-semibold text-ink" : "text-ink-2"}>
+                    <td className="py-2">{c.seconds / 60} min</td>
+                    <td className="py-2">{c.watts} W</td>
+                    <td className="py-2">{pct(c.factor)}</td>
+                    <td className="py-2">
+                      {c.ftp} W{used && <span className="ml-2 text-xs text-teal">used</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
 
       <Card
         title="Power curve"

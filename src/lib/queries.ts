@@ -2,8 +2,9 @@ import { cache } from "react";
 import { db, check, selectAll } from "./db";
 import {
   bestCurve,
+  bestFtpCandidate,
   CURVE_DURATIONS,
-  estimateFtp,
+  ftpCandidates,
   fitnessSeries,
   type FitnessPoint,
   type Zone,
@@ -76,10 +77,14 @@ export const GROUP_LABEL: Record<SportGroup, string> = {
 
 export const day = (a: Pick<Activity, "start_date_local">) => a.start_date_local.slice(0, 10);
 
-/** TSS from normalized power and the current FTP (null without power). */
+/** A ride with a power meter. Running power is on a different scale, so it never counts towards cycling power or FTP. */
+export const isPowerRide = (a: Pick<Activity, "sport_type" | "device_watts">) =>
+  sportGroup(a.sport_type) === "ride" && !!a.device_watts;
+
+/** TSS from normalized power and the current (cycling) FTP. Null except for rides with power. */
 export function tssOf(a: Activity, ftp: number | null): number | null {
   const np = a.metrics?.normalized_power;
-  if (!np || !ftp || !a.device_watts) return null;
+  if (!np || !ftp || !isPowerRide(a)) return null;
   return Math.round((a.moving_time * np * np) / (ftp * ftp * 36));
 }
 
@@ -155,15 +160,30 @@ export const getActivities = cache(async (athleteId: number): Promise<Activity[]
   return rows.map(toActivity);
 });
 
-/** FTP in use: your override, then Strava's, then estimated from the last 90 days. */
+/** FTP estimated from rides in the last 90 days, or from all rides if those have no effort long enough. */
+export const getEftp = cache(async (athleteId: number) => {
+  const rides = (await getActivities(athleteId)).filter((a) => a.metrics?.power_curve && isPowerRide(a));
+  const since = addDays(today(), -90);
+  const recent = rides.filter((a) => day(a) > since);
+  for (const [list, period] of [[recent, "last 90 days"], [rides, "all time"]] as const) {
+    const candidates = ftpCandidates(bestCurve(list.map((a) => a.metrics!.power_curve)));
+    const best = bestFtpCandidate(candidates);
+    if (!best) continue;
+    const ride = list.find((a) => a.metrics!.power_curve![best.seconds] === best.watts)!;
+    return { ...best, candidates, period, ride: { id: ride.id, name: ride.name, date: ride.start_date_local } };
+  }
+  return null;
+});
+
+/** FTP in use: your override, then Strava's, then the estimate. */
 export const getFtp = cache(async (athleteId: number): Promise<{ ftp: number | null; source: string }> => {
   const profile = await getProfile(athleteId);
   if (profile.ftpOverride) return { ftp: profile.ftpOverride, source: "set in settings" };
   if (profile.stravaFtp) return { ftp: profile.stravaFtp, source: "from Strava" };
-  const since = addDays(today(), -90);
-  const recent = (await getActivities(athleteId)).filter((a) => day(a) >= since);
-  const eftp = estimateFtp(bestCurve(recent.map((a) => a.metrics?.power_curve)));
-  return { ftp: eftp, source: "estimated (95% of best 20 min, 90 days)" };
+  const eftp = await getEftp(athleteId);
+  if (!eftp) return { ftp: null, source: "no ride to estimate from" };
+  const pct = +(eftp.factor * 100).toFixed(1);
+  return { ftp: eftp.ftp, source: `estimated: ${pct} % of best ${eftp.seconds / 60} min ride power, ${eftp.period}` };
 });
 
 // ---------- Overview ----------
@@ -336,8 +356,13 @@ export async function getOverview(athleteId: number) {
 export type EffortHolder = { id: number; name: string; date: string };
 
 export async function getPowerData(athleteId: number) {
-  const [acts, profile, ftpInfo] = await Promise.all([getActivities(athleteId), getProfile(athleteId), getFtp(athleteId)]);
-  const withPower = acts.filter((a) => a.metrics?.power_curve && a.device_watts);
+  const [acts, profile, ftpInfo, eftp] = await Promise.all([
+    getActivities(athleteId),
+    getProfile(athleteId),
+    getFtp(athleteId),
+    getEftp(athleteId),
+  ]);
+  const withPower = acts.filter((a) => a.metrics?.power_curve && isPowerRide(a));
   const t = today();
   const between = (from: number, to: number) =>
     withPower.filter((a) => day(a) > addDays(t, -from) && day(a) <= addDays(t, -to));
@@ -398,7 +423,8 @@ export async function getPowerData(athleteId: number) {
     curve,
     monthly,
     keyEfforts,
-    eftp: estimateFtp(last90) ?? estimateFtp(allTime),
+    eftp,
+    eftpPrev90: bestFtpCandidate(ftpCandidates(prev90))?.ftp ?? null,
     ftp: ftpInfo,
     weight: profile.weight,
     powerZones: profile.powerZones,

@@ -567,11 +567,11 @@ export function StreamChart({
 
 // ---------- Activity power curve vs 90-day best ----------
 
-export function ActivityCurveChart({ data }: { data: { seconds: number; activity: number | null; best90: number | null }[] }) {
+export function ActivityCurveChart({ data, compare }: { data: { seconds: number; activity: number | null; best90: number | null }[]; compare: boolean }) {
   const series: Series[] = [
     { key: "activity", label: "This activity", color: "var(--s-ride)", format: (v) => `${v} W` },
-    { key: "best90", label: "90-day best", color: "var(--ink-2)", format: (v) => `${v} W` },
   ];
+  if (compare) series.push({ key: "best90", label: "90-day best", color: "var(--ink-2)", format: (v) => `${v} W` });
   const rows = data.map((d) => ({ ...d, label: curveLabel(d.seconds) }));
   return (
     <>
