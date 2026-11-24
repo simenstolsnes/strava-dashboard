@@ -169,10 +169,33 @@ export function fitnessSeries(loads: DayLoad[], untilDate: string): FitnessPoint
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
 
-/** Estimated FTP from a power curve: 95 % of best 20-minute power. */
-export function estimateFtp(curve: Record<string, number>): number | null {
-  const p20 = curve["1200"];
-  return p20 ? Math.round(p20 * 0.95) : null;
+/**
+ * Share of best power that approximates FTP, per test duration. Midpoints of the
+ * usual ranges: 5 min 0.75–0.80 (least certain, mostly VO2max), 10 min 0.90–0.92,
+ * 20 min 0.95 (Coggan/Allen standard), 30 min 0.98–1.00.
+ */
+export const FTP_FACTORS = [
+  { seconds: 300, factor: 0.775 },
+  { seconds: 600, factor: 0.91 },
+  { seconds: 1200, factor: 0.95 },
+  { seconds: 1800, factor: 0.99 },
+];
+
+export type FtpCandidate = { seconds: number; factor: number; watts: number; ftp: number };
+
+/** FTP estimate from each test duration in a cycling power curve, shortest first. */
+export function ftpCandidates(curve: Record<string, number>): FtpCandidate[] {
+  return FTP_FACTORS.filter(({ seconds }) => curve[seconds]).map(({ seconds, factor }) => ({
+    seconds,
+    factor,
+    watts: curve[seconds],
+    ftp: Math.round(curve[seconds] * factor),
+  }));
+}
+
+/** The best effort: the highest estimate. Ties go to the longer, more reliable duration. */
+export function bestFtpCandidate(candidates: FtpCandidate[]): FtpCandidate | null {
+  return candidates.reduce<FtpCandidate | null>((best, c) => (!best || c.ftp >= best.ftp ? c : best), null);
 }
 
 /** Combine several power curves into a best-of curve. */

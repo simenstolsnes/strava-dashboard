@@ -27,7 +27,9 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
   const g = sportGroup(a.sport_type);
   const isRun = g === "run";
   const hasPower = !!a.device_watts && !!metrics?.normalized_power;
-  const intensity = hasPower && d.ftp ? metrics!.normalized_power! / d.ftp : null;
+  // FTP and the 90-day best are cycling power, so only rides are compared with them
+  const isRide = g === "ride";
+  const intensity = hasPower && isRide && d.ftp ? metrics!.normalized_power! / d.ftp : null;
 
   // Build chart rows from downsampled streams
   const rows =
@@ -46,7 +48,7 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
     ? CURVE_DURATIONS.filter((s) => metrics.power_curve![s]).map((s) => ({
         seconds: s,
         activity: metrics.power_curve![s] ?? null,
-        best90: d.best90[s] ?? null,
+        best90: isRide ? (d.best90[s] ?? null) : null,
       }))
     : [];
 
@@ -181,7 +183,7 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
               altitude: !!streams?.altitude && a.total_elevation_gain > 0,
             }}
             isRun={isRun}
-            ftp={d.ftp}
+            ftp={isRide ? d.ftp : null}
             laps={lapViews}
             hrZones={d.profile.hrZones}
           />
@@ -201,8 +203,8 @@ export default async function ActivityPage({ params }: PageProps<"/activities/[i
       )}
 
       {hasPower && curve.length > 0 && (
-        <Card title="Power curve" subtitle="This activity against your best of the last 90 days">
-          <ActivityCurveChart data={curve} />
+        <Card title="Power curve" subtitle={isRide ? "This ride against your best of the last 90 days" : "Best average power for each duration"}>
+          <ActivityCurveChart data={curve} compare={isRide} />
         </Card>
       )}
 
